@@ -1,0 +1,509 @@
+---
+format:
+  revealjs:
+    theme: simple
+    css: presentation.css
+    slide-number: c/t
+    transition: fade
+    controls: true
+    progress: true
+    center: false
+    width: 1280
+    height: 720
+    margin: 0.06
+    navigation-mode: linear
+    hash: true
+    chalkboard: false
+jupyter: python3
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{python}
+#| include: false
+from pathlib import Path
+import pandas as pd
+import matplotlib.pyplot as plt
+
+watch = pd.read_csv(Path("data") / "cleaned_watch_data.csv")
+raw = pd.read_csv(
+    "IMDb Movies Shows with Descriptions export 2026-05-21 10-00-48.csv",
+    na_values=[r"\N", ""],
+    keep_default_na=True,
+)
+
+COLORS = {
+    "ink": "#17223B",
+    "muted": "#60708F",
+    "coral": "#FF6B6B",
+    "teal": "#18A999",
+    "gold": "#F4B942",
+}
+
+plt.rcParams.update({
+    "font.family": "sans-serif",
+    "font.size": 13,
+    "axes.edgecolor": "#DDE2EC",
+    "xtick.color": COLORS["muted"],
+    "ytick.color": COLORS["ink"],
+})
+```
+
+::: {.hero}
+<div class="eyebrow">MOOD-BASED WATCH RECOMMENDER</div>
+
+# Stop scrolling.<br><span class="accent">Start watching.</span>
+
+<p class="hero-copy">A project that recommends movies and shows based on how the user wants to feel.</p>
+
+<div class="hero-pills"><span>7,848 titles</span><span>Mood-based</span><span>Easy shortlist</span></div>
+
+<p class="author-name">Izzatkhanim Mirzakhanova</p>
+:::
+
+::: {.notes}
+Hi, I am Izzatkhanim Mirzakhanova, and my project is a mood-based watch recommender. The idea is simple: instead of scrolling through hundreds of titles, the user tells the system what kind of mood or experience they want. The system then gives them a short list of suitable movies or shows.
+:::
+
+## Who I am
+
+:::: {.columns}
+::: {.column width="38%"}
+<div class="profile-card">
+<div class="profile-initials">IM</div>
+<h3>Izzatkhanim<br>Mirzakhanova</h3>
+</div>
+:::
+::: {.column width="58%"}
+<div class="about-list">
+<div><span>BACKGROUND</span><p>Student learning Artificial Intelligence and Data Analytics</p></div>
+<div><span>INTEREST</span><p>How data can be used to solve familiar, everyday problems</p></div>
+<div><span>THIS PROJECT</span><p>A practical way to explore data cleaning, text analysis, and recommendations</p></div>
+</div>
+:::
+::::
+
+::: {.notes}
+My name is Izzatkhanim Mirzakhanova. I am a student learning Artificial Intelligence and Data Analytics. I am especially interested in projects that connect technical ideas to normal everyday problems. This project gave me a chance to work with data cleaning, text analysis, and recommendation systems in one practical example.
+:::
+
+## Why I chose this project
+
+:::: {.columns}
+::: {.column width="46%"}
+<div class="quote-card">
+<div class="quote-mark">“</div>
+I want to watch something, but I do not know what.
+</div>
+:::
+::: {.column width="50%"}
+<div class="student-card">
+<h3>A familiar problem</h3>
+<p>Streaming platforms offer a lot of choice, but choosing can take longer than expected.</p>
+<p>I wanted to build something practical that I would actually use myself.</p>
+</div>
+:::
+::::
+
+<div class="takeaway"><b>My goal:</b> help the user choose faster by starting with their mood, not only a genre.</div>
+
+::: {.notes}
+I chose this topic because it is a problem I know personally. Sometimes I open a streaming platform and spend more time looking than watching. Genre is useful, but it does not fully describe what I want. For example, two dramas can feel completely different. So I wanted the first question to be: how do you want to feel?
+:::
+
+## The value of the idea
+
+<div class="value-flow">
+<div>
+<span>THE PROBLEM</span>
+<h3>Too many choices</h3>
+<p>The user keeps scrolling and cannot decide.</p>
+</div>
+<div class="plain-arrow">→</div>
+<div>
+<span>MY SOLUTION</span>
+<h3>Ask about mood</h3>
+<p>The user describes the experience they want.</p>
+</div>
+<div class="plain-arrow">→</div>
+<div>
+<span>THE VALUE</span>
+<h3>A shorter list</h3>
+<p>Recommendations feel more personal and easier to choose from.</p>
+</div>
+</div>
+
+<div class="prompt-demo"><span>EXAMPLE</span> “I want something comforting, funny, and not too intense.”</div>
+
+::: {.notes}
+The value is not that the project has the largest catalogue. The value is that it gives the user a better starting point. The user can say something natural, like “I want something comforting and funny.” The recommender tries to understand that request and returns a smaller, more useful list.
+:::
+
+## The original dataset
+
+:::: {.columns}
+::: {.column width="47%"}
+<div class="dataset-card">
+<div class="eyebrow">SOURCE</div>
+<h3>Kaggle IMDb movies and shows dataset</h3>
+<p>The original CSV contained <b>7,850 rows</b>.</p>
+<p>It included titles, years, content types, genres, ratings, votes, and descriptions.</p>
+</div>
+:::
+::: {.column width="49%"}
+<div class="issue-list">
+<div><b>1</b><span><strong>Missing descriptions</strong><br>Some titles had no useful story text.</span></div>
+<div><b>2</b><span><strong>Wrong descriptions</strong><br>Some descriptions belonged to another title.</span></div>
+<div><b>3</b><span><strong>Uneven quality</strong><br>Some descriptions were too short, vague, or cut off.</span></div>
+<div><b>4</b><span><strong>Missing genres</strong><br>A small number of genre values were missing.</span></div>
+</div>
+:::
+::::
+
+<div class="takeaway">This mattered because the recommender depends heavily on the description of each story.</div>
+
+::: {.notes}
+I started with a Kaggle dataset based on IMDb movies and shows. It had 7,850 rows and useful information such as genres, ratings, votes, and descriptions. But the data was not ready to use. Some descriptions were missing, some were very short, and a more serious problem was that some descriptions did not match the correct movie. If the description is wrong, the recommendation will also be wrong.
+:::
+
+## How I cleaned the data
+
+<div class="clean-flow">
+<div><b>1</b><h3>Check</h3><p>Find missing, short, repeated, or suspicious descriptions.</p></div>
+<div class="plain-arrow">→</div>
+<div><b>2</b><h3>Verify</h3><p>Match the IMDb ID, title, year, and genre before changing a row.</p></div>
+<div class="plain-arrow">→</div>
+<div><b>3</b><h3>Improve</h3><p>Use verified Wikipedia summaries when better text was needed.</p></div>
+<div class="plain-arrow">→</div>
+<div><b>4</b><h3>Test</h3><p>Check again for missing values and incorrect joins.</p></div>
+</div>
+
+<div class="metric-row">
+<div><strong>7,848</strong><span>final usable titles</span></div>
+<div><strong>0</strong><span>missing descriptions</span></div>
+<div><strong>0</strong><span>duplicate IMDb IDs</span></div>
+<div><strong>7,632</strong><span>descriptions improved</span></div>
+</div>
+
+::: {.notes}
+My cleaning process had four main steps. First, I searched for missing, repeated, very short, or suspicious descriptions. Second, I checked the IMDb ID together with the title, year, and genre, so I would not mix up films with similar names. Third, I used verified Wikipedia text when a description needed to be improved. Finally, I checked the cleaned file again. The final dataset has 7,848 usable titles and no missing descriptions.
+:::
+
+## Cleaning results: before and after
+
+:::: {.columns}
+::: {.column width="51%"}
+```{python}
+#| label: fig-cleaning-results
+#| fig-width: 7.0
+#| fig-height: 3.5
+#| out-width: 100%
+#| fig-cap: "Data-quality issues found before cleaning and remaining afterward"
+raw_words = raw["Description"].fillna("").astype(str).str.split().str.len()
+before = [int(raw["Description"].isna().sum()), int((raw_words < 90).sum()), int(raw["tconst"].duplicated().sum())]
+after = [0, 0, 0]
+labels = ["Missing\ndescriptions", "Descriptions\nunder 90 words", "Duplicate\nIMDb IDs"]
+
+fig, axes = plt.subplots(1, 3, figsize=(7.0, 3.5))
+for ax, label, before_value, after_value in zip(axes, labels, before, after):
+    bars = ax.bar(["Before", "After"], [before_value, after_value], color=[COLORS["coral"], COLORS["teal"]], width=.62)
+    ax.set_title(label, fontsize=12, color=COLORS["ink"], fontweight="bold")
+    ax.bar_label(bars, labels=[f"{before_value:,}", f"{after_value:,}"], padding=5, fontweight="bold", color=COLORS["ink"])
+    ax.set_ylim(0, max(before_value * 1.22, 1))
+    ax.set_yticks([])
+    ax.spines[["top", "right", "left", "bottom"]].set_visible(False)
+    ax.tick_params(axis="x", length=0, labelsize=10)
+fig.patch.set_alpha(0)
+plt.tight_layout()
+```
+:::
+::: {.column width="45%"}
+<div class="metric-grid simple">
+<div><strong>7,850</strong><span>original rows</span></div>
+<div><strong>7,848</strong><span>final rows</span></div>
+<div><strong>7,632</strong><span>descriptions improved</span></div>
+<div><strong>100%</strong><span>meet the text target</span></div>
+</div>
+
+<div class="plain-copy">
+The chart measures issues that can be counted automatically. Mismatched descriptions were also reviewed separately because they needed title-by-title checks.
+</div>
+:::
+::::
+
+::: {.notes}
+This chart compares the original file with the cleaned result. The original file had 188 missing descriptions, 6,812 descriptions below my 90-word target, and one extra duplicate IMDb ID. These counted issues were reduced to zero. I also reviewed mismatched descriptions separately, because detecting a wrong story often needs more than a simple automatic count.
+:::
+
+## How the recommender works
+
+<div class="simple-flowchart">
+<div>
+<span class="flow-number">1</span>
+<h3>User request</h3>
+<p>“Something exciting with adventure”</p>
+</div>
+<div class="flow-arrow">→</div>
+<div>
+<span class="flow-number">2</span>
+<h3>Understand the request</h3>
+<p>Look for mood, theme, and story meaning</p>
+</div>
+<div class="flow-arrow">→</div>
+<div>
+<span class="flow-number">3</span>
+<h3>Compare titles</h3>
+<p>Find stories that are similar to the request</p>
+</div>
+<div class="flow-arrow">→</div>
+<div>
+<span class="flow-number">4</span>
+<h3>Show results</h3>
+<p>Return a ranked shortlist</p>
+</div>
+</div>
+
+<div class="beginner-box"><b>In simple words:</b> the computer turns text into numbers, compares those numbers, and finds descriptions with a similar meaning.</div>
+
+::: {.notes}
+This is the full process in simple terms. The user writes what they want. The system looks for the mood and meaning in that request. It compares the request with the descriptions in the dataset and gives a score to each title. The titles with the strongest match appear first. Behind the scenes, text is changed into numbers so that the computer can compare meaning.
+:::
+
+## Project flowchart and architecture
+
+<div class="template-architecture">
+<div class="outside-box kaggle-box">
+<span>DATA SOURCE</span>
+<h3>Kaggle</h3>
+<p>IMDb CSV data</p>
+</div>
+
+<div class="architecture-link link-one">→</div>
+
+<div class="outside-box eda-box">
+<span>PREPARATION</span>
+<h3>EDA & cleaning</h3>
+<p>Python · pandas</p>
+</div>
+
+<div class="architecture-link link-two">→</div>
+
+<div class="project-container">
+<div class="container-title">MOOD-BASED RECOMMENDER</div>
+<div class="inside-box model-box">
+<span>ML / NLP</span>
+<h3>Meaning-based model</h3>
+<p>Compares stories and moods</p>
+</div>
+<div class="inside-box function-box">
+<span>LOGIC</span>
+<h3>Recommendation function</h3>
+<p>Scores and ranks titles</p>
+</div>
+<div class="inside-box result-box">
+<span>OUTPUT</span>
+<h3>Top matches</h3>
+</div>
+</div>
+</div>
+
+<div class="architecture-note"><b>Current stage:</b> the model and recommendation function run in notebooks. <b>Future stage:</b> connect them to an API and user interface.</div>
+
+::: {.notes}
+This architecture diagram is based on the structure from the presentation template. The Kaggle CSV is the data source. I use Python and pandas for exploration and cleaning. Inside the main project, the NLP model compares story meaning, and the recommendation function scores and ranks the titles. At the moment this runs in notebooks. In the future, I would add an API and a simple interface.
+:::
+
+## How the project developed
+
+<div class="evolution beginner">
+<div class="evo-card">
+<span>VERSION 1</span>
+<h3>Simple rules</h3>
+<p>I connected moods to genres and keywords.</p>
+<small>Easy to understand, but too strict.</small>
+</div>
+<div class="evo-arrow">→</div>
+<div class="evo-card">
+<span>VERSION 2</span>
+<h3>Word matching</h3>
+<p>I compared words in the request and descriptions.</p>
+<small>Better, but similar meanings can use different words.</small>
+</div>
+<div class="evo-arrow">→</div>
+<div class="evo-card featured">
+<span>VERSION 3</span>
+<h3>Meaning-based matching</h3>
+<p>The current version compares the meaning of the text.</p>
+<small>More flexible and closer to natural language.</small>
+</div>
+</div>
+
+::: {.notes}
+I did not start with the most advanced version. My first version used rules, genres, and keywords. It was clear, but it could miss a good film if the exact keyword was not present. The second version compared important words. The current version is meaning-based, so two sentences can still match even when they do not use exactly the same words.
+:::
+
+## What decides the final order?
+
+:::: {.columns}
+::: {.column width="47%"}
+<div class="big-score">
+<strong>Match score</strong>
+<span>How suitable is this title for the request?</span>
+</div>
+:::
+::: {.column width="49%"}
+<div class="plain-signals">
+<div><b>Story meaning</b><span>Does the description match what the user asked for?</span></div>
+<div><b>Mood and themes</b><span>Does the title have the right feeling and subject?</span></div>
+<div><b>Genre and format</b><span>Is it the kind of content the user wants?</span></div>
+<div><b>Rating and votes</b><span>Is there enough evidence that viewers rated it well?</span></div>
+</div>
+:::
+::::
+
+<div class="takeaway">The final score combines these signals instead of trusting only one of them.</div>
+
+::: {.notes}
+The final order is not based on only one thing. Story meaning is the most important part. Mood, themes, and genre help make the result more suitable. Ratings and votes are used as a smaller quality signal. I chose this combination because a title can be popular but still be completely wrong for the user’s mood.
+:::
+
+## Example result: recommendation from a prompt
+
+:::: {.columns}
+::: {.column width="37%"}
+<div class="seed-card simple-seed">
+<div class="eyebrow">USER PROMPT</div>
+<h2 class="prompt-title">“I want something exciting, futuristic, and intense”</h2>
+<p>Horror · Thriller · Survival</p>
+<p class="seed-explain">The system reads the request and ranks the best matches.</p>
+</div>
+:::
+::: {.column width="59%"}
+```{python}
+#| label: fig-prompt-results
+#| fig-width: 7.0
+#| fig-height: 4.1
+#| out-width: 100%
+#| fig-cap: "Top five results returned for the prompt"
+prompt_results = pd.Series({
+    "Tenet": 92.9,
+    "Star Trek: Strange New Worlds": 91.8,
+    "Continuum": 90.4,
+    "X2: X-Men United²": 89.3,
+    "Inception": 88.5,
+    
+}).sort_values()
+fig, ax = plt.subplots(figsize=(7.0, 4.1))
+bars = ax.barh(prompt_results.index, prompt_results.values, color=COLORS["teal"])
+ax.bar_label(bars, labels=[f"{v:.1f}%" for v in prompt_results.values], padding=7, color=COLORS["ink"], fontweight="bold")
+ax.set_xlim(0, 100)
+ax.set_xticks([])
+ax.spines[["top", "right", "bottom", "left"]].set_visible(False)
+ax.tick_params(axis="y", labelsize=10, length=0)
+fig.patch.set_alpha(0)
+plt.tight_layout()
+```
+:::
+::::
+
+<div class="takeaway">The prompt is translated into genre, mood, theme, and story signals before the titles are ranked.</div>
+
+::: {.notes}
+This example uses the newer prompt-based recommender. The user asks for a tense zombie survival horror movie. REC received the highest score at 94.1 percent, followed by The Walking Dead at 93.6 percent. The remaining results also match horror, danger, infection, and survival. This shows that the system can work from a natural-language request instead of requiring the user to enter an existing title.
+:::
+
+## What works, and what is still missing?
+
+:::: {.columns}
+::: {.column width="48%"}
+<div class="status-card good">
+<div class="eyebrow">WORKING NOW</div>
+<h3>The prototype can...</h3>
+<ul>
+<li>recommend from a mood or written request</li>
+<li>find titles similar to a chosen title</li>
+<li>rank all 7,848 titles</li>
+<li>show why different signals affected the order</li>
+</ul>
+</div>
+:::
+::: {.column width="48%"}
+<div class="status-card caution">
+<div class="eyebrow">STILL MISSING</div>
+<h3>I have not yet...</h3>
+<ul>
+<li>tested it with a group of real users</li>
+<li>measured whether users are more satisfied</li>
+<li>added titles released after 2023</li>
+<li>finished reviewing every automatic topic label</li>
+</ul>
+</div>
+:::
+::::
+
+::: {.notes}
+The prototype is working: it can accept different kinds of input and rank the full dataset. But I want to be honest about what I have not proven. I have not tested it with a group of users, so I cannot yet say that it is better than another recommender. Also, the dataset ends in 2023, so newer releases are missing.
+:::
+
+## Reflection
+
+:::: {.columns}
+::: {.column width="32%"}
+<div class="reflection-card easy">
+<div class="icon">✓</div>
+<h3>What felt easier</h3>
+<p>Building the first rule-based version and calculating scores.</p>
+</div>
+:::
+::: {.column width="32%"}
+<div class="reflection-card hard">
+<div class="icon">!</div>
+<h3>What was difficult</h3>
+<p>Finding wrong descriptions and replacing them without mixing up titles.</p>
+</div>
+:::
+::: {.column width="32%"}
+<div class="reflection-card learned">
+<div class="icon">↗</div>
+<h3>What I learned</h3>
+<p>Clean and trustworthy data can matter more than using a complicated model.</p>
+</div>
+:::
+::::
+
+::: {.notes}
+The first scoring system was fairly straightforward. The most difficult part was the data quality. I had to be careful not to replace a bad description with another wrong one. The biggest lesson for me was that a complicated model cannot fix unreliable data. Cleaning and checking the dataset made the later work much more meaningful.
+:::
+
+## What I would do next
+
+<div class="roadmap simple-roadmap">
+<div><span>1</span><b>Test with users</b><p>Ask people whether the top five results match their request.</p></div>
+<div><span>2</span><b>Improve accuracy</b><p>Tune the scoring and improve prediction scores for harder titles.</p></div>
+<div><span>3</span><b>Add feedback</b><p>Let users like, dislike, or hide recommendations.</p></div>
+<div><span>4</span><b>Build the app</b><p>Connect the model to a simple and friendly interface.</p></div>
+</div>
+
+<div class="priority-box"><span>MY FIRST PRIORITY</span><strong>Test the recommendations with real people before making the model more complicated.</strong></div>
+
+::: {.notes}
+My first next step would be user testing. I would also work on improving prediction accuracy, especially for titles that currently receive lower match scores. I can do that by tuning the scoring weights, improving the mood labels, and using user feedback. After that, I would add newer titles and connect the recommender to a simple interface.
+:::
+
+## Thank you
+
+::: {.closing}
+<div class="eyebrow">THE MAIN IDEA</div>
+
+### Choose by how you want to <span class="accent">feel</span>,<br>not only by what genre you know.
+
+<p>A cleaner dataset · a more natural search · a shorter watchlist</p>
+
+<div class="closing-question">Questions?</div>
+:::
+
+::: {.notes}
+To finish, the main idea is simple: people do not always know which title or genre they want, but they often know what kind of experience they want. My project uses that feeling as the starting point. Thank you, and I am happy to answer questions.
+:::

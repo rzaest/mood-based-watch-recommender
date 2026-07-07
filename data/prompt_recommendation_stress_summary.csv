@@ -1,0 +1,21 @@
+category,prompt,result_count,top_match_score,score_band,warning,top_title,top_genres,inferred_genres,excluded_genres,excluded_facets
+clear genre mood,"I want something exciting, futuristic, and intense",10,90.7,strong,ok,Tenet,"Action,Sci-Fi,Thriller","Action, Sci-Fi, Thriller",none,none
+clear comfort,"I want a comforting, funny, wholesome family movie",10,85.4,strong,ok,Paddington 2,"Adventure,Comedy,Family","Family, Comedy",none,none
+dark specific,Give me a dark psychological and mind-bending thriller,10,96.5,strong,ok,Saw,"Horror,Mystery,Thriller","Mystery, Thriller",none,none
+romantic mixed emotion,"I want a romantic, bittersweet musical with strong emotions",10,85.7,strong,ok,Mohabbatein,"Drama,Musical,Romance","Musical, Romance",none,none
+specific horror,I want a tense zombie survival horror movie,10,92.8,strong,ok,REC,"Horror,Mystery,Thriller","Horror, Thriller",none,none
+current feeling only,I feel sad and heartbroken,10,76.7,usable,ok,Raising Hope,"Comedy,Family","Comedy, Family",none,mood:dark/sad; tone:bleak/gritty; themes:grief/revenge; emotional_arc:tragic/unsettling
+current feeling plus desire,I feel sad and heartbroken and I want to watch something joyous and comedic,10,96.1,strong,ok,Chappelle's Show,"Comedy,Music",Comedy,none,none
+negation,I want something funny but not scary,10,95.5,strong,ok,Chappelle's Show,"Comedy,Music",Comedy,Horror,mood:dark/tense; tone:bleak/suspenseful; emotional_arc:unsettling
+typos negation,"I dont want sad movie, need joyful commedy",10,88.8,strong,ok,Yes Man,"Comedy,Romance",Comedy,none,mood:sad; themes:grief; emotional_arc:tragic
+broken english,me sad heart broken want watch happy funny,10,93.3,strong,ok,QI,"Comedy,Game-Show",Comedy,none,none
+multi exclusion comfort,"I am exhausted and anxious, no horror, no depressing stuff, just something warm and easy to watch",10,75.4,usable,ok,The Christmas Chronicles,"Adventure,Comedy,Family","Comedy, Family",Horror,mood:dark/sad/tense; tone:bleak/gritty/suspenseful; emotional_arc:tragic/unsettling; themes:grief/revenge
+soft sci-fi,"I want sci fi but not too intense, more hopeful and emotional than violent",10,84.4,usable,ok,Raised by Wolves,"Drama,Fantasy,Sci-Fi",Sci-Fi,"Action, Thriller",mood:tense; tone:suspenseful; pace:fast_paced
+clever mystery exclusion,Give me a clever mystery with twists but nothing violent or disturbing,10,84.1,usable,ok,12 Monkeys,"Adventure,Drama,Mystery",Mystery,none,mood:dark; emotional_arc:unsettling
+inspiring true story,"I want an inspiring true story or documentary, but not war and not too bleak",10,73.7,borderline,top score below usable threshold,The Last Dance,"Biography,Documentary,History",Documentary,War,mood:dark; tone:bleak; setting:war
+romance exclusion,"I want romance, but not tragic heartbreak, something sincere and uplifting",10,85.9,strong,ok,Coupling,"Comedy,Romance",Romance,none,themes:grief; emotional_arc:tragic; mood:sad
+bad grammar comedy,my english bad but i want movie make me laugh no sad no scary,10,94.5,strong,ok,Borat,Comedy,Comedy,Horror,mood:dark/sad/tense; tone:bleak/suspenseful; emotional_arc:tragic/unsettling; themes:grief
+anger regulation,"I feel angry and stressed, I need something calm, funny, and not dark",10,86.1,strong,ok,It's Kind of a Funny Story,"Comedy,Drama,Romance",Comedy,none,mood:dark
+animation nuance,"I want animated or anime action that is fun and adventurous, not horror",10,93.6,strong,ok,Naruto: Shippuden,"Action,Adventure,Animation","Animation, Action",Horror,mood:dark/tense; tone:bleak/suspenseful; emotional_arc:unsettling
+work fatigue,"After a long work day I want light smart comedy, no crime, no heavy drama",10,90.6,strong,ok,Episodes,Comedy,Comedy,"Crime, Drama",mood:dark; conflict_type:criminal
+vague but usable,"Something beautiful, human, a little emotional, but please do not destroy me",10,76.5,usable,ok,Enchanted,"Adventure,Animation,Comedy",none,none,mood:dark/sad; tone:bleak/gritty; themes:grief; emotional_arc:tragic/unsettling

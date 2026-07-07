@@ -1,0 +1,19 @@
+.DS_Store
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+
+# Local/generated model artifacts not needed by the Netlify app
+models/
+data/*.npy
+data/*.csv
+!data/bertopic_topic_review.csv
+!data/prompt_recommendation_evaluation.csv
+!data/prompt_recommendation_stress_summary.csv
+
+# Original raw export is kept locally but not pushed
+IMDb Movies Shows with Descriptions export 2026-05-21 10-00-48.csv
+
+# Quarto cache/temp folders
+*_files/libs/*/.cache/
+.quarto/
