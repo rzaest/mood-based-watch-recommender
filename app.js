@@ -1,6 +1,9 @@
 const state = {
   typeFilter: "all",
   summary: null,
+  requestId: 0,
+  activeController: null,
+  debounceTimer: null,
 };
 
 const API_BASE_URL = (window.MBWR_API_BASE_URL || getDefaultApiBase()).replace(/\/$/, "");
@@ -34,6 +37,10 @@ async function apiFetch(path, options = {}) {
 }
 
 function getControls() {
+  const yearMin = Number(state.summary?.year_min || 1990);
+  const yearMax = Number(state.summary?.year_max || 2023);
+  const yearFrom = Number($("#yearFrom").value);
+  const yearTo = Number($("#yearTo").value);
   return {
     prompt: $("#promptInput").value,
     type: state.typeFilter,
@@ -42,8 +49,8 @@ function getControls() {
     avoid: $("#avoidSelect").value,
     min_rating: Number($("#ratingRange").value),
     min_votes: Number($("#votesRange").value),
-    year_from: Number($("#yearFrom").value),
-    year_to: Number($("#yearTo").value),
+    year_from: Number.isFinite(yearFrom) && yearFrom >= 1800 ? yearFrom : yearMin,
+    year_to: Number.isFinite(yearTo) && yearTo >= 1800 ? yearTo : yearMax,
     limit: Number($("#limitSelect").value),
     sort: $("#sortSelect").value,
   };
@@ -51,19 +58,34 @@ function getControls() {
 
 async function runRecommendation() {
   const controls = getControls();
+  if (controls.year_from > controls.year_to) {
+    renderError("Year from must be less than or equal to year to.");
+    return;
+  }
+  const requestId = ++state.requestId;
+  if (state.activeController) state.activeController.abort();
+  state.activeController = new AbortController();
   setLoading(true);
   try {
     const data = await apiFetch("/recommend", {
       method: "POST",
       body: JSON.stringify(controls),
+      signal: state.activeController.signal,
     });
+    if (requestId !== state.requestId) return;
     renderStatus(data, controls);
     renderResults(data.results || [], data.message);
   } catch (error) {
+    if (error.name === "AbortError" || requestId !== state.requestId) return;
     renderError(error.message || "The recommendation service could not be reached.");
   } finally {
-    setLoading(false);
+    if (requestId === state.requestId) setLoading(false);
   }
+}
+
+function scheduleRecommendation() {
+  clearTimeout(state.debounceTimer);
+  state.debounceTimer = setTimeout(runRecommendation, 180);
 }
 
 function setLoading(isLoading) {
@@ -212,20 +234,20 @@ function bindEvents() {
   document.querySelectorAll("[data-prompt]").forEach((button) => {
     button.addEventListener("click", () => {
       $("#promptInput").value = button.dataset.prompt;
-      runRecommendation();
+      scheduleRecommendation();
     });
   });
   document.querySelectorAll("#typeSegments button").forEach((button) => {
     button.addEventListener("click", () => {
       state.typeFilter = button.dataset.type;
       document.querySelectorAll("#typeSegments button").forEach((item) => item.classList.toggle("active", item === button));
-      runRecommendation();
+      scheduleRecommendation();
     });
   });
   ["genreSelect", "moodSelect", "avoidSelect", "ratingRange", "votesRange", "yearFrom", "yearTo", "limitSelect", "sortSelect"].forEach((id) => {
     $(`#${id}`).addEventListener("input", () => {
       updateRanges();
-      runRecommendation();
+      scheduleRecommendation();
     });
   });
   $("#promptInput").addEventListener("keydown", (event) => {

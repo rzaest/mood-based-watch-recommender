@@ -18,14 +18,14 @@ TYPE_GROUPS = {
 
 GENRE_LEXICON = {
     "Action": ["action", "fight", "combat", "explosive", "chase", "adrenaline", "battle"],
-    "Adventure": ["adventure", "journey", "quest", "exploration", "fun", "adventurous"],
-    "Animation": ["animated", "animation", "anime", "cartoon"],
+    "Adventure": ["adventure", "journey", "quest", "exploration", "fun", "adventurous", "magical"],
+    "Animation": ["animated", "animation", "anime", "cartoon", "cute", "adorable"],
     "Biography": ["biography", "biopic", "true story", "real person", "life story"],
-    "Comedy": ["funny", "comedy", "comedic", "laugh", "hilarious", "joyful", "joyous", "cheerful", "silly", "smart comedy"],
+    "Comedy": ["funny", "comedy", "comedic", "laugh", "hilarious", "joyful", "joyous", "cheerful", "silly", "smart comedy", "lighthearted", "feel good"],
     "Crime": ["crime", "criminal", "detective", "police", "murder", "heist", "mafia"],
     "Documentary": ["documentary", "true story", "nonfiction", "real life", "educational"],
     "Drama": ["drama", "emotional", "human", "serious", "character"],
-    "Family": ["family", "kids", "children", "wholesome", "safe", "easy to watch"],
+    "Family": ["family", "kids", "kid", "children", "childrens", "children's", "child friendly", "kid friendly", "family friendly", "wholesome", "safe", "easy to watch", "cute", "adorable", "sweet", "gentle"],
     "Fantasy": ["fantasy", "magic", "magical", "mythical", "kingdom"],
     "Horror": ["horror", "scary", "creepy", "terrifying", "haunted", "zombie", "monster"],
     "Music": ["music", "musician", "band", "concert", "singer"],
@@ -40,9 +40,9 @@ GENRE_LEXICON = {
 }
 
 MOOD_LEXICON = {
-    "comforting": ["comforting", "cozy", "warm", "gentle", "easy", "safe", "wholesome", "calm"],
-    "joyful": ["joyful", "joyous", "cheerful", "happy", "bright", "good mood"],
-    "funny": ["funny", "comedy", "comedic", "laugh", "hilarious", "silly"],
+    "comforting": ["comforting", "cozy", "warm", "gentle", "easy", "safe", "wholesome", "calm", "cute", "adorable", "sweet", "charming", "soft"],
+    "joyful": ["joyful", "joyous", "cheerful", "happy", "bright", "good mood", "feel good", "lighthearted", "cute", "adorable"],
+    "funny": ["funny", "comedy", "comedic", "laugh", "hilarious", "silly", "goofy", "playful"],
     "hopeful": ["hopeful", "uplifting", "inspiring", "optimistic", "positive"],
     "romantic": ["romantic", "romance", "love", "relationship"],
     "tense": ["tense", "intense", "suspense", "thriller", "anxious"],
@@ -58,6 +58,53 @@ AVOID_MAP = {
     "scary": ["scary", "horror", "creepy", "terrifying", "haunted", "monster", "zombie"],
     "violent": ["violent", "violence", "intense", "tense", "war", "battle", "murder"],
 }
+
+DESCRIPTOR_RULES = [
+    {
+        "patterns": [
+            r"\bcute\b",
+            r"\badorable\b",
+            r"\bsweet\b",
+            r"\bcharming\b",
+            r"\bsoft\b",
+            r"\bwholesome\b",
+            r"\bfeel good\b",
+            r"\blighthearted\b",
+        ],
+        "genres": {"Family": 0.95, "Animation": 0.75, "Comedy": 0.55},
+        "moods": {"comforting": 1.0, "joyful": 0.85, "funny": 0.45},
+        "avoid": {"dark": 1.0, "scary": 1.0, "violent": 1.0},
+    },
+    {
+        "patterns": [
+            r"\bchildren'?s\b",
+            r"\bchildrens\b",
+            r"\bfor children\b",
+            r"\bfor kids\b",
+            r"\bkids?\b",
+            r"\bkid friendly\b",
+            r"\bchild friendly\b",
+            r"\bfamily friendly\b",
+            r"\bfamily movie\b",
+            r"\bfamily film\b",
+        ],
+        "genres": {"Family": 1.0, "Animation": 0.9, "Adventure": 0.45, "Comedy": 0.4},
+        "moods": {"comforting": 1.0, "joyful": 0.85, "hopeful": 0.55, "funny": 0.45},
+        "avoid": {"dark": 1.0, "scary": 1.0, "violent": 1.0, "sad": 0.6},
+    },
+    {
+        "patterns": [r"\bmagical\b", r"\bfairy tale\b", r"\bfairytale\b", r"\bwonder\b"],
+        "genres": {"Fantasy": 0.95, "Adventure": 0.75, "Family": 0.55, "Animation": 0.45},
+        "moods": {"joyful": 0.7, "hopeful": 0.7, "adventurous": 0.65, "comforting": 0.4},
+        "avoid": {},
+    },
+    {
+        "patterns": [r"\brelaxing\b", r"\bchill\b", r"\bcalming\b", r"\blow stakes\b", r"\beasygoing\b"],
+        "genres": {"Comedy": 0.55, "Family": 0.45, "Romance": 0.35},
+        "moods": {"comforting": 1.0, "joyful": 0.55},
+        "avoid": {"dark": 1.0, "scary": 1.0, "violent": 1.0, "sad": 0.6},
+    },
+]
 
 TYPO_ALIASES = {
     "commedy": "comedy",
@@ -85,6 +132,7 @@ class Intent:
     type_from_prompt: str | None
     seed_query: str | None = None
     wants_similarity: bool = False
+    family_safe: bool = False
 
 
 @dataclass
@@ -172,6 +220,18 @@ def infer_avoid_signals(text: str) -> dict[str, float]:
     return result
 
 
+def apply_descriptor_rules(text: str, inferred_genres: dict[str, float], inferred_moods: dict[str, float], avoid_signals: dict[str, float]) -> None:
+    for rule in DESCRIPTOR_RULES:
+        if not any(re.search(pattern, text) for pattern in rule["patterns"]):
+            continue
+        for genre, weight in rule["genres"].items():
+            inferred_genres[genre] = max(inferred_genres.get(genre, 0), weight)
+        for mood, weight in rule["moods"].items():
+            inferred_moods[mood] = max(inferred_moods.get(mood, 0), weight)
+        for avoid, weight in rule["avoid"].items():
+            avoid_signals[avoid] = max(avoid_signals.get(avoid, 0), weight)
+
+
 def parse_intent(prompt: str) -> Intent:
     text = normalize(prompt)
     marker = re.search(r"(i want|want|need|looking for|give me|recommend|show me|in the mood for)", text)
@@ -183,6 +243,11 @@ def parse_intent(prompt: str) -> Intent:
     inferred_moods = infer_weighted_signals(desired_text, MOOD_LEXICON)
     avoid_signals = infer_avoid_signals(text)
     seed_query, wants_similarity = extract_seed_query(text)
+    apply_descriptor_rules(text, inferred_genres, inferred_moods, avoid_signals)
+    family_safe = re.search(
+        r"\b(cute|adorable|sweet|wholesome|children'?s|childrens|for children|for kids|kids?|kid friendly|child friendly|family friendly|family movie|family film)\b",
+        text,
+    ) is not None
 
     positive_desire = any(mood in inferred_moods for mood in ["comforting", "joyful", "funny", "hopeful"]) or "Comedy" in inferred_genres
     if negative_state and positive_desire:
@@ -197,7 +262,7 @@ def parse_intent(prompt: str) -> Intent:
         avoid_signals["sad"] = 1
         avoid_signals["dark"] = 1
 
-    return Intent(text, desired_text, inferred_genres, inferred_moods, avoid_signals, detect_type_from_prompt(text), seed_query, wants_similarity)
+    return Intent(text, desired_text, inferred_genres, inferred_moods, avoid_signals, detect_type_from_prompt(text), seed_query, wants_similarity, family_safe)
 
 
 class MoodRecommender:
@@ -251,6 +316,7 @@ class MoodRecommender:
             intent.type_from_prompt,
             intent.seed_query,
             intent.wants_similarity,
+            intent.family_safe,
         )
 
         scored: list[tuple[CatalogItem, float]] = []
@@ -401,6 +467,24 @@ class MoodRecommender:
                 penalty += 0.18
         return min(0.75, penalty)
 
+    def _family_safety_adjustment(self, item: CatalogItem, intent: Intent) -> float:
+        if not intent.family_safe:
+            return 0
+        genres = set(item.get("genres", []))
+        facets = {facet.get("label") for group in item.get("facets", {}).values() for facet in group}
+        score = 0.0
+        if genres & {"Family", "Animation"}:
+            score += 0.22
+        if genres & {"Adventure", "Comedy", "Fantasy"}:
+            score += 0.06
+        if not genres & {"Family", "Animation"}:
+            score -= 0.34
+        if genres & {"Crime", "Horror", "Thriller", "War"}:
+            score -= 0.28
+        if facets & {"dark", "violent", "bleak", "unsettling", "criminal"}:
+            score -= 0.16
+        return score
+
     def _seed_similarity(self, item: CatalogItem, seed: SeedMatch | None) -> float:
         if not seed:
             return 0
@@ -426,10 +510,11 @@ class MoodRecommender:
         popularity = min(1, math.log10((item.get("votes") or 0) + 1) / 6.5)
         topic = 0.82 if item.get("lowConfidence") else 1
         penalty = self._avoid_penalty(item, intent.avoid_signals, request.avoid)
+        family_adjustment = self._family_safety_adjustment(item, intent)
         if seed:
-            score = ((seed_similarity * 0.52) + (genre * 0.16) + (text * 0.11) + (mood * 0.08) + (quality * 0.08) + (popularity * 0.05) - penalty) * topic
+            score = ((seed_similarity * 0.52) + (genre * 0.16) + (text * 0.11) + (mood * 0.08) + (quality * 0.08) + (popularity * 0.05) + family_adjustment - penalty) * topic
         else:
-            score = ((text * 0.34) + (genre * 0.28) + (mood * 0.22) + (quality * 0.11) + (popularity * 0.05) - penalty) * topic
+            score = ((text * 0.34) + (genre * 0.28) + (mood * 0.22) + (quality * 0.11) + (popularity * 0.05) + family_adjustment - penalty) * topic
         return max(0, min(1, score))
 
     def _calibrate_scores(self, raw_scores: list[float]) -> list[float]:
