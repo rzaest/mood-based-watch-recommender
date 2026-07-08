@@ -211,7 +211,3 @@ ALLOWED_ORIGINS=https://mood-based-watch-recommender.netlify.app,https://mood-ba
 ```
 
 `config.js` is already set so the Netlify frontend calls the Render backend. Local development and Render same-origin serving still use the same host automatically.
-
-## Security Notes
-
-No API keys are required for the deployed recommender. Secret files are ignored through `.gitignore`, including `.env`, `.env.*`, key/certificate files, `.netlify/`, and `.render/`. Real API keys or service tokens should never be committed.
