@@ -1,6 +1,10 @@
 [build]
   publish = "."
 
+# Netlify can host the frontend only. The recommendation system now requires
+# the FastAPI backend; deploy that separately and set window.MBWR_API_BASE_URL
+# in config.js, or use the recommended single-service Render deployment.
+
 [[headers]]
   for = "/*"
   [headers.values]
