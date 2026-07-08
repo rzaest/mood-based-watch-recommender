@@ -834,6 +834,8 @@ def plot_description(description: str, title: str = "") -> str:
     text = re.sub(r"\s+", " ", str(description or "")).strip()
     if not text:
         return ""
+    text = re.split(r"\bThe strongest subject and narrative signals\b", text, flags=re.IGNORECASE)[0].strip()
+    text = re.split(r"\bThe strongest subject and narrative\b", text, flags=re.IGNORECASE)[0].strip()
 
     sentences = split_sentences(text)
     kept: list[str] = []
@@ -843,15 +845,18 @@ def plot_description(description: str, title: str = "") -> str:
         cleaned = clean_plot_sentence(sentence, title)
         if not cleaned:
             continue
-        if is_plot_sentence(cleaned):
+        if is_plot_sentence(cleaned) and not is_metadata_sentence(cleaned):
             kept.append(cleaned)
         elif not is_metadata_sentence(cleaned):
             fallback.append(cleaned)
 
     chosen = kept or fallback
     if not chosen:
-        return truncate_description(text)
-    return truncate_description(" ".join(chosen[:3]))
+        return "Plot summary not available."
+    selected = chosen[:1]
+    if len(selected[0]) < 90 and len(chosen) > 1:
+        selected.append(chosen[1])
+    return truncate_description(" ".join(ensure_sentence_end(sentence) for sentence in selected))
 
 
 def split_sentences(text: str) -> list[str]:
@@ -861,7 +866,10 @@ def split_sentences(text: str) -> list[str]:
 
 def clean_plot_sentence(sentence: str, title: str = "") -> str:
     sentence = sentence.strip()
-    if not sentence or sentence.endswith("..."):
+    if not sentence:
+        return ""
+    sentence = re.sub(r"\.{3,}$", ".", sentence).strip()
+    if len(sentence) < 28:
         return ""
     lowered = sentence.lower()
     title_lower = str(title or "").lower()
@@ -872,38 +880,119 @@ def clean_plot_sentence(sentence: str, title: str = "") -> str:
         if not re.search(r"\bfollows\b|\bcenters on\b|\brevolves around\b|\btells\b|\babout\b", lowered):
             return ""
 
+    sentence = extract_plot_clause(sentence)
+
     starring_match = re.search(r"\bstars? .+? as ([^.]+)", sentence, flags=re.IGNORECASE)
     if starring_match and re.search(r"\bwho\b|\bwhose\b|\bmust\b|\btries\b|\bdiscovers\b|\bfinds\b", starring_match.group(1), flags=re.IGNORECASE):
         sentence = starring_match.group(1).strip()
 
     sentence = re.sub(r",\s+who\s+", " ", sentence, flags=re.IGNORECASE)
     sentence = re.sub(r",\s+whose\s+", " whose ", sentence, flags=re.IGNORECASE)
+    sentence = re.sub(r"\bas\s+(he|she|they)\s+", r" who ", sentence, flags=re.IGNORECASE)
     sentence = re.sub(r"^the storyline follows\b", "The story follows", sentence, flags=re.IGNORECASE)
     sentence = re.sub(r"^it follows\b", "The story follows", sentence, flags=re.IGNORECASE)
+    sentence = re.sub(r"^it revolves around\b", "The story follows", sentence, flags=re.IGNORECASE)
+    sentence = re.sub(r"^it tells the story of\b", "The story follows", sentence, flags=re.IGNORECASE)
     sentence = re.sub(r"^follows\b", "The story follows", sentence, flags=re.IGNORECASE)
+    sentence = re.sub(r"^(The story follows .+?) tries to\b", r"\1 as he tries to", sentence, flags=re.IGNORECASE)
+    sentence = fix_incomplete_ending(sentence)
     return sentence[:1].upper() + sentence[1:] if sentence else ""
+
+
+def extract_plot_clause(sentence: str) -> str:
+    set_in_cast_match = re.search(
+        r"^(Set\s+in\s+[^,]+),\s+the\s+film\s+stars\s+.+?\s+as\s+(.+\bas\s+(?:he|she|they)\b.+)$",
+        sentence,
+        flags=re.IGNORECASE,
+    )
+    if set_in_cast_match:
+        return f"{set_in_cast_match.group(1)}, {set_in_cast_match.group(2)}"
+
+    starring_story_match = re.search(
+        r"\bstarring\s+.+?,\s+(it\s+tells\s+the\s+story\s+of\s+.+)$",
+        sentence,
+        flags=re.IGNORECASE,
+    )
+    if starring_story_match:
+        return starring_story_match.group(1)
+
+    patterns = [
+        r"\b((?:the film|the series|the story|it)\s+follows\s+.+)$",
+        r"\b((?:the film|the series|the story|it)\s+explores\s+.+)$",
+        r"\b((?:the film|the series|the story|it)\s+focuses\s+on\s+.+)$",
+        r"\b((?:the film|the series|the story|it)\s+tells\s+the\s+story\s+of\s+.+)$",
+        r"\b((?:the plot\s+)?cent(?:ers|res)\s+on\s+.+)$",
+        r"\b((?:it\s+)?revolves\s+around\s+.+)$",
+        r"\b((?:it\s+)?is\s+about\s+.+)$",
+        r"\b(set\s+in\s+.+)$",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, sentence, flags=re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+
+    action_match = re.search(
+        r"\bas\s+((?:he|she|they|a|an|the|[A-Z][A-Za-z'-]+).+\b(?:investigates|tries|must|discovers|finds|sets out|struggles|faces|uncovers|purchases|leaves)\b.+)$",
+        sentence,
+    )
+    if action_match:
+        return action_match.group(1).strip()
+
+    return sentence
 
 
 def is_metadata_sentence(sentence: str) -> bool:
     lowered = sentence.lower()
+    if re.search(r"\breleased from prison\b|\bis released from prison\b|\bwas released from prison\b", lowered):
+        return False
     metadata_patterns = [
         r"\bdirected by\b",
         r"\bwritten by\b",
         r"\bproduced by\b",
+        r"\bcreated by\b",
         r"\bstarring\b",
         r"\bstars\b",
-        r"\breleased\b",
+        r"\bfeatures the voices\b",
+        r"\bensemble cast\b",
+        r"\bsupporting roles\b",
+        r"\breleased\s+(?:on|in|by|through|theatrically|digitally|worldwide|under|just|shortly)\b",
+        r"\brelease\s+(?:date|of|on|in)\b",
         r"\bpremiered\b",
         r"\baired\b",
+        r"\bofficially premiered\b",
+        r"\bwas canceled\b",
+        r"\bcontinues .+ premiered\b",
+        r"\bunaired\b",
+        r"\bbroadcast\b",
+        r"\bbroadcasting\b",
+        r"\bcommissioned\b",
+        r"\bdistributor\b",
+        r"\bdistribution\b",
+        r"\brebroadcast\b",
+        r"\bdebuted after\b",
+        r"\breleased internationally\b",
+        r"\btheatrical release\b",
         r"\bavailable for streaming\b",
         r"\bbox office\b",
         r"\bfilm festival\b",
+        r"\bpositive reviews\b",
+        r"\bnominations\b",
+        r"\bawards\b",
+        r"\bdistribution rights\b",
+        r"\bwas pulled from the air\b",
+        r"\bstrongest subject and narrative signals\b",
+        r"\bavailable synopsis include\b",
+        r"\btransl\.\b",
+        r"\bbased on the \d{4} novel\b",
+        r"\bbased on a story by\b",
         r"\bdvd\b",
         r"\bblu-ray\b",
         r"\bclassified within\b",
         r"\bverified genre profile\b",
     ]
-    return any(re.search(pattern, lowered) for pattern in metadata_patterns)
+    if any(re.search(pattern, lowered) for pattern in metadata_patterns):
+        return True
+    return False
 
 
 def is_plot_sentence(sentence: str) -> bool:
@@ -918,9 +1007,9 @@ def is_plot_sentence(sentence: str) -> bool:
         r"\babout\b",
         r"\bwhen\b",
         r"\bafter\b",
-        r"\bwhile\b",
         r"\bmust\b",
         r"\btries to\b",
+        r"\binvestigates\b",
         r"\bdiscovers\b",
         r"\bfinds\b",
         r"\bsets out\b",
@@ -928,21 +1017,41 @@ def is_plot_sentence(sentence: str) -> bool:
         r"\bbecomes\b",
         r"\bstruggles\b",
         r"\bfaces\b",
+        r"\bexplores\b",
+        r"\bfocuses on\b",
         r"\buncovers\b",
     ]
     return any(re.search(pattern, lowered) for pattern in plot_patterns)
 
 
-def truncate_description(text: str, limit: int = 560) -> str:
+def truncate_description(text: str, limit: int = 380) -> str:
     text = re.sub(r"\s+", " ", text).strip()
     if len(text) <= limit:
-        return ensure_sentence_end(text)
-    truncated = text[:limit].rsplit(" ", 1)[0].rstrip(" ,;:")
-    return f"{truncated}..."
+        return ensure_sentence_end(fix_incomplete_ending(text))
+    cut = text[:limit].rsplit(" ", 1)[0].rstrip(" ,;:")
+    last_boundary = max(cut.rfind("."), cut.rfind(";"), cut.rfind(","))
+    if last_boundary > 180:
+        cut = cut[: last_boundary + 1].rstrip()
+    return ensure_sentence_end(fix_incomplete_ending(cut))
 
 
 def ensure_sentence_end(text: str) -> str:
     return text if not text or text[-1] in ".!?" else f"{text}."
+
+
+def fix_incomplete_ending(text: str) -> str:
+    text = text.strip().rstrip(".")
+    previous = None
+    while previous != text:
+        previous = text
+        text = re.sub(r"\s+(?:a|an|the|to|for|with|of|in|on|at|by|from|after|before|while|when|against|during|into|onto|under|over)\.?$", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"\s+(?:and|or|but|as|that|who|whose|which|making|including|featuring|backdrop|structure)\.?$", "", text, flags=re.IGNORECASE)
+    if re.search(r"\b(after|before|while|when|against|during|into|onto|under|over)$", text, flags=re.IGNORECASE):
+        text = text.rsplit(",", 1)[0]
+    if re.search(r"\b(global|cultural|political|social|personal|dangerous|mysterious|supernatural|criminal)\.?$", text, flags=re.IGNORECASE):
+        text = text.rstrip(".")
+        text = text.rsplit(",", 1)[0] if "," in text else text.rsplit(" ", 1)[0]
+    return text.strip(" ,;")
 
 
 def facet_labels(item: CatalogItem, category: str) -> set[str]:
