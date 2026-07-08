@@ -4,13 +4,15 @@ A deployable mood-aware movie and TV recommendation project. The product lets a 
 
 ## Live App Entry Point
 
-Open `index.html` after deployment. The app is fully static and works on Netlify without a backend.
+Open `index.html` after deployment. The app is fully static and works on Netlify without a server process.
+
+The deployed product is connected to the final recommender output through `assets/data/catalog.json`. On page load, `app.js` fetches that catalog, parses the user's prompt in the browser, scores the catalog, applies the selected filters, and renders the ranked recommendations. This is the Netlify-compatible version of the backend logic: the Python notebooks build the final model/features, and the web app consumes the exported static catalog.
 
 Important files for the web product:
 
 - `index.html` - main web app page.
 - `styles.css` - responsive UI styling.
-- `app.js` - browser-side recommendation logic, prompt parsing, filters, scoring, poster lookup, and rendering.
+- `app.js` - browser-side recommendation logic, prompt parsing, filters, scoring, poster display, and rendering.
 - `assets/data/catalog.json` - compact deployable catalog generated from the final NLP feature table.
 - `netlify.toml` - Netlify static-site configuration.
 
@@ -19,12 +21,13 @@ Important files for the web product:
 The app supports:
 
 - Natural-language prompts such as `I feel sad and heartbroken and I want to watch something joyous and comedic`.
-- Format selectors for all formats, movies, TV, shorts, and other formats.
+- Format selectors for all formats, movies, TV, and shorts.
 - Automatic format detection from prompts. If the prompt explicitly asks for a movie or film, only movies are displayed. If the prompt asks for a show, TV, or series, TV formats are displayed.
 - Genre, mood, avoid-signal, rating, vote, year, result-count, and sorting controls.
 - Explicit avoid handling for prompts such as `not scary`, `not sad`, `no crime`, `no heavy drama`, or `please do not destroy me`.
-- Recommendation diagnostics showing the interpreted request, inferred genres, and avoided signals.
-- Poster/cover display. The app fetches Wikipedia page thumbnails when available and uses a polished fallback cover if no usable image is found.
+- A minimal interface with the main prompt and format controls visible first, plus optional advanced filters inside the `Refine results` panel.
+- A connected-catalog status line showing that the web app has loaded the deployable recommendation data.
+- High-quality poster/cover display. The catalog includes poster URLs for all 7,848 titles, using IMDb-hosted suggestion artwork where available and an IMDb-ID poster fallback for the remaining titles.
 
 ## Model And Notebook Files
 

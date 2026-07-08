@@ -2,7 +2,6 @@ const state = {
   catalog: [],
   meta: null,
   typeFilter: "all",
-  posterCache: JSON.parse(localStorage.getItem("poster-cache-v1") || "{}"),
 };
 
 const TYPE_GROUPS = {
@@ -10,7 +9,6 @@ const TYPE_GROUPS = {
   movie: new Set(["movie"]),
   tv: new Set(["tvSeries", "tvMiniSeries", "tvMovie", "tvEpisode", "tvShort", "tvSpecial"]),
   short: new Set(["short", "tvShort"]),
-  other: new Set(["video", "videoGame"]),
 };
 
 const GENRE_LEXICON = {
@@ -99,9 +97,9 @@ function phraseNegated(text, phrase) {
 
 function detectTypeFromPrompt(prompt) {
   const text = normalize(prompt);
-  if (/\b(movie|movies|film|films)\b/.test(text) && !/\b(show|series|tv)\b/.test(text)) return "movie";
-  if (/\b(show|shows|series|tv series|television)\b/.test(text) && !/\b(movie|film)\b/.test(text)) return "tv";
-  if (/\bshort|shorts\b/.test(text)) return "short";
+  if (/\b(movie|movies|film|films)\b/.test(text) && !/\b(show|shows|series|tv|television)\b/.test(text)) return "movie";
+  if (/\b(show|shows|series|tv series|television)\b/.test(text) && !/\b(movie|movies|film|films)\b/.test(text)) return "tv";
+  if (/\b(short|shorts)\b/.test(text)) return "short";
   return null;
 }
 
@@ -249,22 +247,25 @@ function runRecommendation() {
   });
 
   const results = scored.slice(0, controls.limit);
-  renderDiagnostics(intent, effectiveType, results.length, controls);
+  renderStatus(intent, effectiveType, results.length, controls);
   renderResults(results, mergedIntent, controls);
 }
 
-function renderDiagnostics(intent, effectiveType, count, controls) {
+function renderStatus(intent, effectiveType, count, controls) {
   $("#resultCount").textContent = count.toLocaleString();
-  const typeNote = intent.typeFromPrompt ? `Format forced by prompt: ${labelType(effectiveType)}.` : `Format selector: ${labelType(effectiveType)}.`;
+  const typeNote = intent.typeFromPrompt ? `Prompt locked format to ${labelType(effectiveType)}.` : `Showing ${labelType(effectiveType)}.`;
   $("#detectedIntent").textContent = typeNote;
-  $("#interpretedRequest").textContent = intent.desiredText || "No prompt text";
-  $("#inferredGenres").textContent = Object.keys(intent.inferredGenres).join(", ") || "No genre inferred";
-  const avoid = [controls.avoid !== "none" ? controls.avoid : null, ...Object.keys(intent.avoidSignals)].filter(Boolean);
-  $("#avoidedSignals").textContent = avoid.length ? [...new Set(avoid)].join(", ") : "No avoid rule";
+
+  const genres = Object.keys(intent.inferredGenres);
+  const avoids = [controls.avoid !== "none" ? controls.avoid : null, ...Object.keys(intent.avoidSignals)].filter(Boolean);
+  $("#intentSummary").textContent = [
+    genres.length ? `Inferred ${genres.join(", ")}.` : "No specific genre forced.",
+    avoids.length ? `Avoiding ${[...new Set(avoids)].join(", ")}.` : "No extra avoid rule.",
+  ].join(" ");
 }
 
 function labelType(type) {
-  return ({ all: "all formats", movie: "movies", tv: "TV", short: "shorts", other: "other formats" }[type] || type);
+  return ({ all: "all formats", movie: "movies", tv: "TV", short: "shorts" }[type] || type);
 }
 
 function renderResults(results, intent, controls) {
@@ -274,19 +275,22 @@ function renderResults(results, intent, controls) {
     root.innerHTML = '<div class="empty">No matches passed the filters. Try lowering the vote/rating threshold or widening the format selector.</div>';
     return;
   }
+
   const template = $("#cardTemplate");
   results.forEach(({ item, score }) => {
     const node = template.content.cloneNode(true);
-    const card = node.querySelector(".title-card");
     const poster = node.querySelector(".poster");
     const fallback = node.querySelector(".poster-fallback");
+
     fallback.textContent = item.title;
-    poster.alt = `${item.title} cover image`;
-    node.querySelector(".match-badge").textContent = `${Math.round(score * 100)}%`;
+    poster.alt = `${item.title} poster`;
+    setPoster(poster, item.posterUrl);
+    node.querySelector(".format").textContent = `${labelContentType(item.type)}${item.year ? ` • ${item.year}` : ""}`;
+    node.querySelector(".match-badge").textContent = `${Math.round(score * 100)}% match`;
     node.querySelector("h3").textContent = item.title;
-    node.querySelector(".year").textContent = item.year || "";
-    node.querySelector(".meta").textContent = `${labelContentType(item.type)} • ${item.genres.join(", ")} • ${item.rating?.toFixed(1) || "N/A"} rating • ${formatVotes(item.votes)} votes`;
+    node.querySelector(".meta").textContent = `${item.genres.join(", ")} • ${item.rating?.toFixed(1) || "N/A"} rating • ${formatVotes(item.votes)} votes`;
     node.querySelector(".description").textContent = item.description;
+
     const tags = node.querySelector(".tags");
     [...item.genres.slice(0, 3), item.facets?.mood?.[0]?.label, item.facets?.tone?.[0]?.label].filter(Boolean).forEach((tag) => {
       const span = document.createElement("span");
@@ -295,8 +299,16 @@ function renderResults(results, intent, controls) {
     });
     node.querySelector(".why").textContent = buildWhy(item, intent, controls, score);
     root.appendChild(node);
-    hydratePoster(item, poster, card);
   });
+}
+
+function setPoster(image, url) {
+  image.classList.remove("loaded");
+  image.removeAttribute("src");
+  if (!url) return;
+  image.onload = () => image.classList.add("loaded");
+  image.onerror = () => image.classList.remove("loaded");
+  image.src = url;
 }
 
 function labelContentType(type) {
@@ -326,53 +338,11 @@ function buildWhy(item, intent, controls, score) {
   const genreMatch = Object.keys(intent.inferredGenres).filter((genre) => item.genres.includes(genre));
   return [
     `Match score: ${Math.round(score * 100)}%.`,
-    genreMatch.length ? `Genre intent matched: ${genreMatch.join(", ")}.` : "Matched through prompt language, topic, and facets.",
+    genreMatch.length ? `Genre intent matched: ${genreMatch.join(", ")}.` : "Matched through prompt language, NLP topic, and facets.",
     topMood ? `Mood signals: ${topMood}.` : "",
     topArc ? `Emotional arc: ${topArc}.` : "",
     item.topic ? `Topic: ${item.topic}.` : "",
   ].filter(Boolean).join(" ");
-}
-
-async function hydratePoster(item, image) {
-  const key = `${item.id}:${item.title}:${item.year}`;
-  if (state.posterCache[key]) {
-    setPoster(image, state.posterCache[key]);
-    return;
-  }
-  const url = await fetchWikipediaPoster(item);
-  if (url) {
-    state.posterCache[key] = url;
-    localStorage.setItem("poster-cache-v1", JSON.stringify(state.posterCache));
-    setPoster(image, url);
-  }
-}
-
-function setPoster(image, url) {
-  image.src = url;
-  image.onload = () => image.classList.add("loaded");
-}
-
-async function fetchWikipediaPoster(item) {
-  const candidates = [
-    `${item.title} ${item.year} film`,
-    `${item.title} ${item.year} television series`,
-    `${item.title} ${item.year}`,
-    item.title,
-  ];
-  for (const query of candidates) {
-    try {
-      const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&origin=*&format=json&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrlimit=1&prop=pageimages&pithumbsize=600`;
-      const response = await fetch(searchUrl);
-      if (!response.ok) continue;
-      const data = await response.json();
-      const pages = data.query?.pages ? Object.values(data.query.pages) : [];
-      const thumb = pages[0]?.thumbnail?.source;
-      if (thumb) return thumb;
-    } catch {
-      return null;
-    }
-  }
-  return null;
 }
 
 function populateFilters() {
@@ -388,10 +358,9 @@ function populateFilters() {
     option.textContent = mood.replace(/_/g, " ");
     $("#moodSelect").appendChild(option);
   });
-  $("#catalogCount").textContent = state.meta.count.toLocaleString();
-  $("#yearRange").textContent = `${state.meta.yearMin}-${state.meta.yearMax}`;
   $("#yearFrom").value = state.meta.yearMin;
   $("#yearTo").value = state.meta.yearMax;
+  $("#catalogStatus").textContent = `Connected to ${state.meta.count.toLocaleString()} catalog titles`;
 }
 
 function bindEvents() {
@@ -451,5 +420,6 @@ async function init() {
 
 init().catch((error) => {
   console.error(error);
+  $("#catalogStatus").textContent = "Catalog failed to load";
   $("#results").innerHTML = '<div class="empty">The catalog could not be loaded. Please run this through a local server or Netlify.</div>';
 });

@@ -5,137 +5,116 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Mood-Based Watch Recommender</title>
     <meta name="description" content="A mood-aware movie and TV recommender built from cleaned IMDb data, NLP topics, and interpretable emotional facets.">
-    <link rel="preconnect" href="https://en.wikipedia.org">
+    <link rel="preconnect" href="https://m.media-amazon.com">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <main class="app-shell">
       <section class="hero">
-        <div>
-          <p class="eyebrow">Mood-Based Watch Recommender</p>
-          <h1>Find something that fits how you want to feel.</h1>
-          <p class="hero-copy">
-            Describe the mood, genre, pace, exclusions, or content type you want. The recommender combines
-            prompt intent, content filters, NLP topics, facets, rating quality, and explicit avoid rules.
-          </p>
-        </div>
-        <div class="hero-stats" aria-label="catalog summary">
-          <div><strong id="catalogCount">...</strong><span>titles</span></div>
-          <div><strong id="yearRange">...</strong><span>years</span></div>
-          <div><strong id="resultCount">0</strong><span>matches</span></div>
-        </div>
+        <p class="eyebrow">Mood-Based Watch Recommender</p>
+        <h1>What should we watch tonight?</h1>
+        <p class="hero-copy">
+          Describe the feeling, genre, pace, or anything you want to avoid. The app reads your prompt,
+          applies the filters, and ranks titles from the final NLP catalog.
+        </p>
       </section>
 
-      <section class="controls" aria-label="recommendation controls">
-        <div class="prompt-panel">
-          <label for="promptInput">Prompt</label>
-          <textarea id="promptInput" rows="4" spellcheck="true">I feel sad and heartbroken and I want to watch something joyous and comedic</textarea>
-          <div class="prompt-actions">
-            <button id="recommendButton" type="button">Recommend</button>
-            <button id="resetButton" class="secondary" type="button">Reset</button>
+      <section class="search-card" aria-label="recommendation search">
+        <div class="prompt-row">
+          <label for="promptInput">Your mood or request</label>
+          <textarea id="promptInput" rows="3" spellcheck="true">I feel sad and heartbroken and I want to watch something joyous and comedic</textarea>
+        </div>
+
+        <div class="primary-actions">
+          <div class="segments" id="typeSegments" aria-label="format filter">
+            <button type="button" data-type="all" class="active">All</button>
+            <button type="button" data-type="movie">Movies</button>
+            <button type="button" data-type="tv">TV</button>
+            <button type="button" data-type="short">Shorts</button>
           </div>
-          <div class="examples" aria-label="example prompts">
-            <button type="button" data-prompt="I want something funny but not scary">Funny, not scary</button>
-            <button type="button" data-prompt="I want sci fi but not too intense, more hopeful and emotional than violent">Soft sci-fi</button>
-            <button type="button" data-prompt="I am exhausted and anxious, no horror, no depressing stuff, just something warm and easy to watch">Warm and easy</button>
-            <button type="button" data-prompt="After a long work day I want light smart comedy, no crime, no heavy drama">Light smart comedy</button>
+          <button id="recommendButton" type="button">Recommend</button>
+        </div>
+
+        <div class="examples" aria-label="example prompts">
+          <button type="button" data-prompt="I want something funny but not scary">Funny, not scary</button>
+          <button type="button" data-prompt="I want sci fi but not too intense, more hopeful than violent">Hopeful sci-fi</button>
+          <button type="button" data-prompt="I am exhausted and anxious, no horror, no depressing stuff, just something warm and easy to watch">Warm and easy</button>
+        </div>
+
+        <details class="refine-panel">
+          <summary>Refine results</summary>
+          <div class="filter-grid">
+            <label>
+              Genre
+              <select id="genreSelect">
+                <option value="all">Any genre</option>
+              </select>
+            </label>
+
+            <label>
+              Mood
+              <select id="moodSelect">
+                <option value="all">Any mood</option>
+              </select>
+            </label>
+
+            <label>
+              Avoid
+              <select id="avoidSelect">
+                <option value="none">No extra avoid rule</option>
+                <option value="dark">Dark or disturbing</option>
+                <option value="sad">Sad or tragic</option>
+                <option value="scary">Scary or horror</option>
+                <option value="violent">Violent or intense</option>
+              </select>
+            </label>
+
+            <label>
+              Rating
+              <input id="ratingRange" type="range" min="0" max="9" step="0.1" value="6.5">
+              <span id="ratingValue" class="range-value">6.5+</span>
+            </label>
+
+            <label>
+              Votes
+              <input id="votesRange" type="range" min="0" max="250000" step="5000" value="30000">
+              <span id="votesValue" class="range-value">30,000+</span>
+            </label>
+
+            <label>
+              Years
+              <span class="year-pair">
+                <input id="yearFrom" type="number" min="1900" max="2030" value="1990" aria-label="year from">
+                <input id="yearTo" type="number" min="1900" max="2030" value="2023" aria-label="year to">
+              </span>
+            </label>
+
+            <label>
+              Results
+              <select id="limitSelect">
+                <option value="8">8</option>
+                <option value="12" selected>12</option>
+                <option value="20">20</option>
+                <option value="40">40</option>
+              </select>
+            </label>
+
+            <label>
+              Sort
+              <select id="sortSelect">
+                <option value="match">Best match</option>
+                <option value="rating">Highest rating</option>
+                <option value="popular">Most votes</option>
+                <option value="recent">Newest</option>
+              </select>
+            </label>
           </div>
-        </div>
+        </details>
 
-        <div class="filter-grid">
-          <fieldset>
-            <legend>Format</legend>
-            <div class="segments" id="typeSegments">
-              <button type="button" data-type="all" class="active">All</button>
-              <button type="button" data-type="movie">Movies</button>
-              <button type="button" data-type="tv">TV</button>
-              <button type="button" data-type="short">Shorts</button>
-              <button type="button" data-type="other">Other</button>
-            </div>
-            <p id="detectedIntent" class="hint">Prompt intent will appear here.</p>
-          </fieldset>
-
-          <label>
-            Genre
-            <select id="genreSelect">
-              <option value="all">Any genre</option>
-            </select>
-          </label>
-
-          <label>
-            Mood
-            <select id="moodSelect">
-              <option value="all">Any mood</option>
-            </select>
-          </label>
-
-          <label>
-            Avoid
-            <select id="avoidSelect">
-              <option value="none">No extra avoid rule</option>
-              <option value="dark">Dark or disturbing</option>
-              <option value="sad">Sad or tragic</option>
-              <option value="scary">Scary or horror</option>
-              <option value="violent">Violent or intense</option>
-            </select>
-          </label>
-
-          <label>
-            Minimum rating
-            <input id="ratingRange" type="range" min="0" max="9" step="0.1" value="6.5">
-            <span id="ratingValue" class="range-value">6.5+</span>
-          </label>
-
-          <label>
-            Minimum votes
-            <input id="votesRange" type="range" min="0" max="250000" step="5000" value="30000">
-            <span id="votesValue" class="range-value">30,000+</span>
-          </label>
-
-          <label>
-            Year from
-            <input id="yearFrom" type="number" min="1900" max="2030" value="1990">
-          </label>
-
-          <label>
-            Year to
-            <input id="yearTo" type="number" min="1900" max="2030" value="2023">
-          </label>
-
-          <label>
-            Results
-            <select id="limitSelect">
-              <option value="8">8</option>
-              <option value="12" selected>12</option>
-              <option value="20">20</option>
-              <option value="40">40</option>
-            </select>
-          </label>
-
-          <label>
-            Sort
-            <select id="sortSelect">
-              <option value="match">Best match</option>
-              <option value="rating">Highest rating</option>
-              <option value="popular">Most votes</option>
-              <option value="recent">Newest</option>
-            </select>
-          </label>
-        </div>
-      </section>
-
-      <section class="diagnostics" aria-label="model interpretation">
-        <div>
-          <span>Interpreted request</span>
-          <strong id="interpretedRequest">Waiting for input</strong>
-        </div>
-        <div>
-          <span>Inferred genres</span>
-          <strong id="inferredGenres">None yet</strong>
-        </div>
-        <div>
-          <span>Avoided signals</span>
-          <strong id="avoidedSignals">None yet</strong>
+        <div class="status-row" aria-live="polite">
+          <span id="catalogStatus">Loading catalog...</span>
+          <span id="detectedIntent">Prompt intent will appear here.</span>
+          <button id="resetButton" class="text-button" type="button">Reset</button>
         </div>
       </section>
 
@@ -143,9 +122,9 @@
         <div class="section-heading">
           <div>
             <p class="eyebrow">Recommendations</p>
-            <h2>Ranked matches</h2>
+            <h2><span id="resultCount">0</span> ranked matches</h2>
           </div>
-          <p class="image-note">Cover images are fetched from Wikipedia page thumbnails when available, with a styled fallback for missing artwork.</p>
+          <p id="intentSummary">The model interpretation will appear after the catalog loads.</p>
         </div>
         <div id="results" class="results-grid" aria-live="polite"></div>
       </section>
@@ -154,15 +133,15 @@
     <template id="cardTemplate">
       <article class="title-card">
         <div class="poster-wrap">
-          <img class="poster" alt="">
+          <img class="poster" alt="" loading="lazy">
           <div class="poster-fallback"></div>
-          <span class="match-badge"></span>
         </div>
         <div class="card-body">
-          <div class="card-title-row">
-            <h3></h3>
-            <span class="year"></span>
+          <div class="card-topline">
+            <span class="format"></span>
+            <span class="match-badge"></span>
           </div>
+          <h3></h3>
           <p class="meta"></p>
           <p class="description"></p>
           <div class="tags"></div>
