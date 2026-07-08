@@ -66,7 +66,7 @@ That catalog is built from the final NLP feature table created in the notebooks.
 - `requirements-backend.txt` - lightweight backend deployment dependencies
 - `requirements.txt` - full notebook/modeling environment for reproducibility
 
-## Notebooks Included For Grading
+## Notebooks Included
 
 The notebooks are included because they explain the data, enrichment, topic, label, facet, and evaluation work behind the final product.
 
