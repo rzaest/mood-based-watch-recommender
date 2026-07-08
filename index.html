@@ -14,8 +14,7 @@
         <p class="eyebrow">Mood-Based Watch Recommender</p>
         <h1>What should we watch tonight?</h1>
         <p class="hero-copy">
-          Describe the feeling, genre, pace, or anything you want to avoid. The app reads your prompt,
-          applies the filters, and ranks titles from the final NLP catalog.
+          Describe the feeling, genre, pace, or anything you want to avoid.
         </p>
       </section>
 
@@ -93,8 +92,8 @@
               Results
               <select id="limitSelect">
                 <option value="8">8</option>
-                <option value="12" selected>12</option>
-                <option value="20">20</option>
+                <option value="12">12</option>
+                <option value="20" selected>20</option>
                 <option value="40">40</option>
               </select>
             </label>
@@ -112,8 +111,6 @@
         </details>
 
         <div class="status-row" aria-live="polite">
-          <span id="catalogStatus">Loading catalog...</span>
-          <span id="detectedIntent">Prompt intent will appear here.</span>
           <button id="resetButton" class="text-button" type="button">Reset</button>
         </div>
       </section>
@@ -122,9 +119,9 @@
         <div class="section-heading">
           <div>
             <p class="eyebrow">Recommendations</p>
-            <h2><span id="resultCount">0</span> ranked matches</h2>
+            <h2><span id="resultCount">0</span> recommendations</h2>
           </div>
-          <p id="intentSummary">The model interpretation will appear after the catalog loads.</p>
+          <p id="intentSummary"></p>
         </div>
         <div id="results" class="results-grid" aria-live="polite"></div>
       </section>

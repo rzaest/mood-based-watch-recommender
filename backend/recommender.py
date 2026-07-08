@@ -17,39 +17,39 @@ TYPE_GROUPS = {
 }
 
 GENRE_LEXICON = {
-    "Action": ["action", "fight", "combat", "explosive", "chase", "adrenaline", "battle"],
+    "Action": ["action", "fight", "combat", "explosive", "chase", "adrenaline", "battle", "action packed", "high energy"],
     "Adventure": ["adventure", "journey", "quest", "exploration", "fun", "adventurous", "magical"],
     "Animation": ["animated", "animation", "anime", "cartoon", "cute", "adorable"],
     "Biography": ["biography", "biopic", "true story", "real person", "life story"],
     "Comedy": ["funny", "comedy", "comedic", "laugh", "hilarious", "joyful", "joyous", "cheerful", "silly", "smart comedy", "lighthearted", "feel good"],
     "Crime": ["crime", "criminal", "detective", "police", "murder", "heist", "mafia"],
     "Documentary": ["documentary", "true story", "nonfiction", "real life", "educational"],
-    "Drama": ["drama", "emotional", "human", "serious", "character"],
+    "Drama": ["drama", "emotional", "human", "serious", "character", "moving", "tearjerker"],
     "Family": ["family", "kids", "kid", "children", "childrens", "children's", "child friendly", "kid friendly", "family friendly", "wholesome", "safe", "easy to watch", "cute", "adorable", "sweet", "gentle"],
     "Fantasy": ["fantasy", "magic", "magical", "mythical", "kingdom"],
     "Horror": ["horror", "scary", "creepy", "terrifying", "haunted", "zombie", "monster"],
     "Music": ["music", "musician", "band", "concert", "singer"],
     "Musical": ["musical", "singing", "song and dance"],
     "Mystery": ["mystery", "twist", "twists", "clever", "puzzle", "investigation", "mind bending"],
-    "Romance": ["romance", "romantic", "love", "relationship", "date night"],
+    "Romance": ["romance", "romantic", "love", "relationship", "date night", "cute couple", "sweet romance"],
     "Sci-Fi": ["sci fi", "sci-fi", "scifi", "science fiction", "future", "futuristic", "space", "alien", "robot"],
     "Sport": ["sport", "sports", "athlete", "competition", "football", "basketball"],
-    "Thriller": ["thriller", "tense", "intense", "suspense", "dangerous", "edge of my seat"],
+    "Thriller": ["thriller", "tense", "intense", "suspense", "dangerous", "edge of my seat", "gripping", "stressful"],
     "War": ["war", "battlefield", "soldier", "military"],
     "Western": ["western", "cowboy", "frontier", "outlaw"],
 }
 
 MOOD_LEXICON = {
-    "comforting": ["comforting", "cozy", "warm", "gentle", "easy", "safe", "wholesome", "calm", "cute", "adorable", "sweet", "charming", "soft"],
-    "joyful": ["joyful", "joyous", "cheerful", "happy", "bright", "good mood", "feel good", "lighthearted", "cute", "adorable"],
+    "comforting": ["comforting", "cozy", "warm", "gentle", "easy", "safe", "wholesome", "calm", "cute", "adorable", "sweet", "charming", "soft", "soothing", "pleasant", "nice", "heartwarming"],
+    "joyful": ["joyful", "joyous", "cheerful", "happy", "bright", "good mood", "feel good", "lighthearted", "cute", "adorable", "fun", "delightful", "upbeat"],
     "funny": ["funny", "comedy", "comedic", "laugh", "hilarious", "silly", "goofy", "playful"],
-    "hopeful": ["hopeful", "uplifting", "inspiring", "optimistic", "positive"],
-    "romantic": ["romantic", "romance", "love", "relationship"],
-    "tense": ["tense", "intense", "suspense", "thriller", "anxious"],
-    "dark": ["dark", "disturbing", "grim", "bleak", "violent"],
-    "sad": ["sad", "tragic", "heartbreak", "heartbroken", "depressing", "grief"],
-    "adventurous": ["adventurous", "adventure", "quest", "journey", "exciting"],
-    "mind_bending": ["mind bending", "twisty", "surreal", "psychological"],
+    "hopeful": ["hopeful", "uplifting", "inspiring", "optimistic", "positive", "motivational", "empowering", "triumphant"],
+    "romantic": ["romantic", "romance", "love", "relationship", "flirty", "tender", "passionate", "date night"],
+    "tense": ["tense", "intense", "suspense", "thriller", "anxious", "gripping", "stressful", "edge of my seat", "nerve wracking"],
+    "dark": ["dark", "disturbing", "grim", "bleak", "violent", "gritty", "serious", "haunting", "mature"],
+    "sad": ["sad", "tragic", "heartbreak", "heartbroken", "depressing", "grief", "melancholy", "bittersweet", "tearjerker", "emotional"],
+    "adventurous": ["adventurous", "adventure", "quest", "journey", "exciting", "epic", "sweeping", "exploration"],
+    "mind_bending": ["mind bending", "twisty", "surreal", "psychological", "weird", "strange", "trippy", "clever", "smart", "thought provoking"],
 }
 
 AVOID_MAP = {
@@ -57,6 +57,38 @@ AVOID_MAP = {
     "sad": ["sad", "tragic", "heartbreak", "heartbroken", "depressing", "grief"],
     "scary": ["scary", "horror", "creepy", "terrifying", "haunted", "monster", "zombie"],
     "violent": ["violent", "violence", "intense", "tense", "war", "battle", "murder"],
+}
+
+PROMPT_STOPWORDS = {
+    "anything",
+    "can",
+    "could",
+    "feel",
+    "feeling",
+    "film",
+    "films",
+    "find",
+    "give",
+    "like",
+    "looking",
+    "me",
+    "movie",
+    "movies",
+    "need",
+    "please",
+    "recommend",
+    "series",
+    "show",
+    "shows",
+    "something",
+    "that",
+    "thing",
+    "things",
+    "tonight",
+    "watch",
+    "want",
+    "wants",
+    "with",
 }
 
 DESCRIPTOR_RULES = [
@@ -70,10 +102,25 @@ DESCRIPTOR_RULES = [
             r"\bwholesome\b",
             r"\bfeel good\b",
             r"\blighthearted\b",
+            r"\bheartwarming\b",
+            r"\bdelightful\b",
+            r"\bpleasant\b",
         ],
-        "genres": {"Family": 0.95, "Animation": 0.75, "Comedy": 0.55},
-        "moods": {"comforting": 1.0, "joyful": 0.85, "funny": 0.45},
+        "genres": {"Family": 0.85, "Animation": 0.55, "Comedy": 0.55, "Romance": 0.5},
+        "moods": {"comforting": 1.0, "joyful": 0.85, "funny": 0.45, "romantic": 0.35},
         "avoid": {"dark": 1.0, "scary": 1.0, "violent": 1.0},
+    },
+    {
+        "patterns": [r"\bcozy\b", r"\bwarm\b", r"\bgentle\b", r"\bsoothing\b", r"\bcomforting\b", r"\bnice\b", r"\bcalm\b"],
+        "genres": {"Comedy": 0.4, "Romance": 0.35, "Family": 0.3, "Drama": 0.2},
+        "moods": {"comforting": 1.0, "joyful": 0.45, "hopeful": 0.3},
+        "avoid": {"dark": 1.0, "scary": 1.0, "violent": 1.0, "sad": 0.5},
+    },
+    {
+        "patterns": [r"\bplayful\b", r"\bgoofy\b", r"\bsilly\b", r"\bfun\b", r"\bfunny\b", r"\bhilarious\b", r"\bmake me laugh\b"],
+        "genres": {"Comedy": 1.0, "Animation": 0.25, "Family": 0.25, "Romance": 0.2},
+        "moods": {"funny": 1.0, "joyful": 0.75, "comforting": 0.25},
+        "avoid": {"dark": 0.8, "sad": 0.6},
     },
     {
         "patterns": [
@@ -104,6 +151,108 @@ DESCRIPTOR_RULES = [
         "moods": {"comforting": 1.0, "joyful": 0.55},
         "avoid": {"dark": 1.0, "scary": 1.0, "violent": 1.0, "sad": 0.6},
     },
+    {
+        "patterns": [r"\bromantic\b", r"\bdate night\b", r"\bflirty\b", r"\btender\b", r"\bsweet romance\b", r"\blove story\b"],
+        "genres": {"Romance": 1.0, "Comedy": 0.45, "Drama": 0.25},
+        "moods": {"romantic": 1.0, "comforting": 0.55, "joyful": 0.45},
+        "avoid": {},
+    },
+    {
+        "patterns": [r"\bsad\b", r"\bemotional\b", r"\bcry\b", r"\btearjerker\b", r"\bheartbreaking\b", r"\bmelancholy\b", r"\bbittersweet\b"],
+        "genres": {"Drama": 0.9, "Romance": 0.35},
+        "moods": {"sad": 1.0, "romantic": 0.25},
+        "avoid": {},
+    },
+    {
+        "patterns": [r"\bdramatic\b", r"\bmoving\b", r"\bpowerful\b", r"\bhuman\b", r"\bcharacter driven\b", r"\bserious story\b"],
+        "genres": {"Drama": 1.0, "Biography": 0.3, "Romance": 0.2},
+        "moods": {"sad": 0.45, "hopeful": 0.25, "romantic": 0.2},
+        "avoid": {},
+    },
+    {
+        "patterns": [r"\bdark\b", r"\bgritty\b", r"\bbleak\b", r"\bserious\b", r"\bmature\b", r"\bhaunting\b"],
+        "genres": {"Drama": 0.55, "Thriller": 0.45, "Crime": 0.35},
+        "moods": {"dark": 1.0, "tense": 0.45, "sad": 0.25},
+        "avoid": {},
+    },
+    {
+        "patterns": [r"\bscary\b", r"\bcreepy\b", r"\bhorror\b", r"\bspooky\b", r"\bunsettling\b", r"\bterrifying\b"],
+        "genres": {"Horror": 1.0, "Thriller": 0.55, "Mystery": 0.25},
+        "moods": {"dark": 0.9, "tense": 0.8, "mind_bending": 0.25},
+        "avoid": {},
+    },
+    {
+        "patterns": [r"\bintense\b", r"\btense\b", r"\bgripping\b", r"\bsuspenseful\b", r"\bhigh stakes\b", r"\bedge of my seat\b"],
+        "genres": {"Thriller": 0.9, "Action": 0.55, "Crime": 0.35},
+        "moods": {"tense": 1.0, "dark": 0.35},
+        "avoid": {},
+    },
+    {
+        "patterns": [r"\bmysterious\b", r"\bmystery\b", r"\btwisty\b", r"\bwith twists\b", r"\bpuzzle\b", r"\binvestigation\b"],
+        "genres": {"Mystery": 1.0, "Thriller": 0.45, "Crime": 0.35, "Drama": 0.2},
+        "moods": {"mind_bending": 0.7, "tense": 0.55},
+        "avoid": {},
+    },
+    {
+        "patterns": [r"\bsmart\b", r"\bclever\b", r"\bthought provoking\b", r"\bintellectual\b", r"\bcomplex\b", r"\bmind bending\b"],
+        "genres": {"Mystery": 0.75, "Sci-Fi": 0.55, "Drama": 0.25},
+        "moods": {"mind_bending": 1.0, "tense": 0.25},
+        "avoid": {},
+    },
+    {
+        "patterns": [r"\bweird\b", r"\bstrange\b", r"\bsurreal\b", r"\btrippy\b", r"\boffbeat\b", r"\bquirky\b"],
+        "genres": {"Fantasy": 0.45, "Sci-Fi": 0.45, "Comedy": 0.35},
+        "moods": {"mind_bending": 1.0, "funny": 0.35},
+        "avoid": {},
+    },
+    {
+        "patterns": [r"\binspiring\b", r"\buplifting\b", r"\bmotivational\b", r"\bempowering\b", r"\btriumphant\b"],
+        "genres": {"Drama": 0.45, "Biography": 0.4, "Sport": 0.35, "Family": 0.25},
+        "moods": {"hopeful": 1.0, "joyful": 0.45, "comforting": 0.35},
+        "avoid": {"dark": 0.45, "sad": 0.25},
+    },
+    {
+        "patterns": [r"\bfast paced\b", r"\baction packed\b", r"\bexplosive\b", r"\badrenaline\b", r"\bexciting\b"],
+        "genres": {"Action": 1.0, "Adventure": 0.55, "Thriller": 0.35},
+        "moods": {"adventurous": 0.85, "tense": 0.45},
+        "avoid": {},
+    },
+    {
+        "patterns": [r"\bepic\b", r"\bgrand\b", r"\bbig adventure\b", r"\bquest\b", r"\bjourney\b", r"\bheroic\b"],
+        "genres": {"Adventure": 1.0, "Fantasy": 0.45, "Action": 0.35, "Drama": 0.2},
+        "moods": {"adventurous": 1.0, "hopeful": 0.35, "tense": 0.25},
+        "avoid": {},
+    },
+    {
+        "patterns": [r"\brealistic\b", r"\beducational\b", r"\binformative\b", r"\btrue story\b", r"\breal life\b", r"\bnonfiction\b"],
+        "genres": {"Documentary": 0.95, "Biography": 0.55, "Drama": 0.25},
+        "moods": {"hopeful": 0.25, "mind_bending": 0.25},
+        "avoid": {},
+    },
+    {
+        "patterns": [r"\bmusical\b", r"\bmusic\b", r"\bsinging\b", r"\bsongs\b", r"\bconcert\b", r"\bdance\b"],
+        "genres": {"Music": 0.8, "Musical": 0.8, "Drama": 0.25, "Comedy": 0.2},
+        "moods": {"joyful": 0.55, "romantic": 0.25, "hopeful": 0.25},
+        "avoid": {},
+    },
+    {
+        "patterns": [r"\bdetective\b", r"\bcrime\b", r"\bheist\b", r"\bmafia\b", r"\bcriminal\b", r"\bpolice\b"],
+        "genres": {"Crime": 1.0, "Mystery": 0.45, "Thriller": 0.35, "Drama": 0.25},
+        "moods": {"tense": 0.65, "dark": 0.35},
+        "avoid": {},
+    },
+    {
+        "patterns": [r"\bfuturistic\b", r"\bspace\b", r"\balien\b", r"\brobot\b", r"\bsci fi\b", r"\bscience fiction\b"],
+        "genres": {"Sci-Fi": 1.0, "Adventure": 0.35, "Action": 0.3, "Mystery": 0.2},
+        "moods": {"mind_bending": 0.55, "adventurous": 0.35, "tense": 0.25},
+        "avoid": {},
+    },
+    {
+        "patterns": [r"\bnostalgic\b", r"\bclassic\b", r"\bold school\b", r"\bretro\b"],
+        "genres": {"Drama": 0.3, "Comedy": 0.25, "Family": 0.25},
+        "moods": {"comforting": 0.55, "joyful": 0.35, "sad": 0.2},
+        "avoid": {},
+    },
 ]
 
 TYPO_ALIASES = {
@@ -133,6 +282,8 @@ class Intent:
     seed_query: str | None = None
     wants_similarity: bool = False
     family_safe: bool = False
+    child_safe: bool = False
+    excluded_genres: set[str] | None = None
 
 
 @dataclass
@@ -220,6 +371,21 @@ def infer_avoid_signals(text: str) -> dict[str, float]:
     return result
 
 
+def infer_excluded_genres(text: str) -> set[str]:
+    excluded: set[str] = set()
+    for genre, phrases in GENRE_LEXICON.items():
+        candidates = {genre.lower(), genre.lower().replace("-", " "), *phrases}
+        for phrase in candidates:
+            if phrase_negated(text, normalize(phrase)):
+                excluded.add(genre)
+                break
+    if re.search(r"\b(no|not|without|avoid|exclude)\s+(cartoon|cartoons|animated|animation|anime)\b", text):
+        excluded.add("Animation")
+    if re.search(r"\b(no|not|without|avoid|exclude)\s+(love story|love stories|romcom|rom com|romance|romantic)\b", text):
+        excluded.add("Romance")
+    return excluded
+
+
 def apply_descriptor_rules(text: str, inferred_genres: dict[str, float], inferred_moods: dict[str, float], avoid_signals: dict[str, float]) -> None:
     for rule in DESCRIPTOR_RULES:
         if not any(re.search(pattern, text) for pattern in rule["patterns"]):
@@ -242,10 +408,17 @@ def parse_intent(prompt: str) -> Intent:
     inferred_genres = infer_weighted_signals(text, GENRE_LEXICON)
     inferred_moods = infer_weighted_signals(desired_text, MOOD_LEXICON)
     avoid_signals = infer_avoid_signals(text)
+    excluded_genres = infer_excluded_genres(text)
     seed_query, wants_similarity = extract_seed_query(text)
     apply_descriptor_rules(text, inferred_genres, inferred_moods, avoid_signals)
+    for genre in excluded_genres:
+        inferred_genres.pop(genre, None)
     family_safe = re.search(
         r"\b(cute|adorable|sweet|wholesome|children'?s|childrens|for children|for kids|kids?|kid friendly|child friendly|family friendly|family movie|family film)\b",
+        text,
+    ) is not None
+    child_safe = re.search(
+        r"\b(children'?s|childrens|for children|for kids|kids?|kid friendly|child friendly|family friendly|family movie|family film)\b",
         text,
     ) is not None
 
@@ -262,7 +435,19 @@ def parse_intent(prompt: str) -> Intent:
         avoid_signals["sad"] = 1
         avoid_signals["dark"] = 1
 
-    return Intent(text, desired_text, inferred_genres, inferred_moods, avoid_signals, detect_type_from_prompt(text), seed_query, wants_similarity, family_safe)
+    return Intent(
+        text,
+        desired_text,
+        inferred_genres,
+        inferred_moods,
+        avoid_signals,
+        detect_type_from_prompt(text),
+        seed_query,
+        wants_similarity,
+        family_safe,
+        child_safe,
+        excluded_genres,
+    )
 
 
 class MoodRecommender:
@@ -317,11 +502,15 @@ class MoodRecommender:
             intent.seed_query,
             intent.wants_similarity,
             intent.family_safe,
+            intent.child_safe,
+            intent.excluded_genres,
         )
 
         scored: list[tuple[CatalogItem, float]] = []
         for item in self.items:
             if not self._type_matches(item, effective_type):
+                continue
+            if intent.excluded_genres and set(item.get("genres", [])) & intent.excluded_genres:
                 continue
             if seed and intent.wants_similarity and seed.item and item.get("id") == seed.item.get("id"):
                 continue
@@ -343,7 +532,9 @@ class MoodRecommender:
             self._format_result(item, raw_score, display_score, intent, request, seed)
             for (item, raw_score), display_score in zip(raw_results, display_scores, strict=False)
         ]
-        avoids = sorted(set(([request.avoid] if request.avoid != "none" else []) + list(intent.avoid_signals)))
+        avoids = sorted(
+            set(([request.avoid] if request.avoid != "none" else []) + list(intent.avoid_signals) + list(intent.excluded_genres or []))
+        )
 
         return RecommendResponse(
             interpreted_request=intent.desired_text or "No prompt text",
@@ -429,11 +620,11 @@ class MoodRecommender:
         return sum(wanted.get(facet.get("label"), 0) * max(float(facet.get("score") or 0), 0.08) for facet in facets)
 
     def _text_score(self, item: CatalogItem, intent: Intent) -> float:
-        tokens = [token for token in intent.desired_text.split() if len(token) > 3]
+        tokens = [token for token in intent.desired_text.split() if len(token) > 3 and token not in PROMPT_STOPWORDS]
         if not tokens:
             return 0
-        search_text = item.get("searchText", "")
-        hits = sum(1 for token in tokens if token in search_text)
+        search_tokens = set(normalize(item.get("searchText", "")).split())
+        hits = sum(1 for token in tokens if token in search_tokens)
         return min(1, hits / min(len(tokens), 12))
 
     def _genre_score(self, item: CatalogItem, inferred_genres: dict[str, float], selected_genre: str) -> float:
@@ -473,6 +664,22 @@ class MoodRecommender:
         genres = set(item.get("genres", []))
         facets = {facet.get("label") for group in item.get("facets", {}).values() for facet in group}
         score = 0.0
+        if not intent.child_safe:
+            if genres & {"Family", "Animation", "Comedy", "Romance"}:
+                score += 0.12
+            if not genres & {"Family", "Animation", "Romance"}:
+                score -= 0.18
+            if facets & {"whimsical", "sincere", "love", "home_family", "escapist", "uplifting"}:
+                score += 0.08
+            if genres & {"Crime", "Horror", "War"}:
+                score -= 0.22
+            if genres & {"Thriller"}:
+                score -= 0.1
+            if facets & {"dark", "violent", "bleak", "unsettling", "criminal", "gritty", "tragic", "revenge", "survival"}:
+                score -= 0.18
+            if facets & {"satirical", "suspenseful"}:
+                score -= 0.08
+            return score
         if genres & {"Family", "Animation"}:
             score += 0.22
         if genres & {"Adventure", "Comedy", "Fantasy"}:
@@ -481,7 +688,7 @@ class MoodRecommender:
             score -= 0.34
         if genres & {"Crime", "Horror", "Thriller", "War"}:
             score -= 0.28
-        if facets & {"dark", "violent", "bleak", "unsettling", "criminal"}:
+        if facets & {"dark", "violent", "bleak", "unsettling", "criminal", "gritty", "tragic", "revenge", "survival"}:
             score -= 0.16
         return score
 
@@ -567,15 +774,13 @@ class MoodRecommender:
         if seed:
             pieces.append(f"Seed title: {seed.title} ({seed.source}).")
         if seed and not genre_match:
-            pieces.append("Matched through seed-title genres, topic, facets, and story text.")
+            pieces.append("Matched through similar titles, story details, and tone.")
         else:
-            pieces.append(f"Genre intent matched: {', '.join(genre_match)}." if genre_match else "Matched through prompt language, NLP topic, and facets.")
+            pieces.append(f"Genre matched: {', '.join(genre_match)}." if genre_match else "Matched through your prompt, story details, and tone.")
         if top_mood:
-            pieces.append(f"Mood signals: {top_mood}.")
+            pieces.append(f"Mood: {top_mood}.")
         if top_arc:
-            pieces.append(f"Emotional arc: {top_arc}.")
-        if item.get("topic"):
-            pieces.append(f"Topic: {item['topic']}.")
+            pieces.append(f"Story feel: {top_arc}.")
         return " ".join(pieces)
 
 

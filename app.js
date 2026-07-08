@@ -51,7 +51,7 @@ function getControls() {
     min_votes: Number($("#votesRange").value),
     year_from: Number.isFinite(yearFrom) && yearFrom >= 1800 ? yearFrom : yearMin,
     year_to: Number.isFinite(yearTo) && yearTo >= 1800 ? yearTo : yearMax,
-    limit: Number($("#limitSelect").value),
+    limit: Number($("#limitSelect").value || 20),
     sort: $("#sortSelect").value,
   };
 }
@@ -95,18 +95,9 @@ function setLoading(isLoading) {
 
 function renderStatus(data, controls) {
   $("#resultCount").textContent = Number(data.count || 0).toLocaleString();
-  const typeNote = data.effective_type !== controls.type
-    ? `Prompt locked format to ${labelType(data.effective_type)}.`
-    : `Showing ${labelType(data.effective_type)}.`;
-  $("#detectedIntent").textContent = typeNote;
-
-  const genres = data.inferred_genres || [];
-  const avoids = data.avoided_signals || [];
-  $("#intentSummary").textContent = [
-    data.seed_title ? `Using seed title: ${data.seed_title}.` : null,
-    genres.length ? `Inferred ${genres.join(", ")}.` : "No specific genre forced.",
-    avoids.length ? `Avoiding ${avoids.join(", ")}.` : "No extra avoid rule.",
-  ].filter(Boolean).join(" ");
+  const summary = [];
+  if (data.seed_title) summary.push(`Inspired by ${data.seed_title}.`);
+  $("#intentSummary").textContent = summary.join(" ");
 }
 
 function labelType(type) {
@@ -149,8 +140,7 @@ function renderResults(results, message) {
 
 function renderError(message) {
   $("#resultCount").textContent = "0";
-  $("#detectedIntent").textContent = "Backend request failed.";
-  $("#intentSummary").textContent = "Check that the FastAPI backend is running and reachable.";
+  $("#intentSummary").textContent = "";
   $("#results").innerHTML = `<div class="empty">${escapeHtml(message)}</div>`;
 }
 
@@ -213,7 +203,6 @@ function populateFilters(summary) {
   });
   $("#yearFrom").value = summary.year_min || 1990;
   $("#yearTo").value = summary.year_max || 2023;
-  $("#catalogStatus").textContent = `Backend connected to ${Number(summary.total_titles || 0).toLocaleString()} catalog titles`;
 }
 
 function bindEvents() {
@@ -226,6 +215,7 @@ function bindEvents() {
     $("#ratingRange").value = "6.5";
     $("#votesRange").value = "30000";
     $("#sortSelect").value = "match";
+    $("#limitSelect").value = "20";
     state.typeFilter = "all";
     document.querySelectorAll("#typeSegments button").forEach((button) => button.classList.toggle("active", button.dataset.type === "all"));
     updateRanges();
@@ -268,8 +258,7 @@ async function init() {
     populateFilters(summary);
     await runRecommendation();
   } catch (error) {
-    $("#catalogStatus").textContent = "Backend not connected";
-    renderError(error.message || "Could not connect to the recommendation backend.");
+    renderError("Recommendations are unavailable right now. Please try again in a moment.");
   }
 }
 

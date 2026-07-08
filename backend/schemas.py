@@ -13,7 +13,7 @@ class RecommendRequest(BaseModel):
     min_votes: int = Field(default=30000, ge=0)
     year_from: int = Field(default=1990, ge=1800, le=2100)
     year_to: int = Field(default=2023, ge=1800, le=2100)
-    limit: int = Field(default=12, ge=1, le=50)
+    limit: int = Field(default=20, ge=1, le=50)
     sort: Literal["match", "rating", "popular", "recent"] = "match"
 
     @field_validator("prompt")
