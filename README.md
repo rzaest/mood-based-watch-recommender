@@ -1,7 +1,6 @@
 # Mood-Based Watch Recommender
 
-Live app: https://mood-based-watch-recommender.onrender.com
-Backend API: https://mood-based-watch-recommender.onrender.com
+Live app and Backend API: https://mood-based-watch-recommender.onrender.com
 
 Mood-Based Watch Recommender is a movie and TV recommendation product that lets users describe what they want to watch in natural language. Instead of only choosing a genre, the user can write prompts such as:
 
