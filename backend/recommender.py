@@ -759,7 +759,7 @@ class MoodRecommender:
             genres=item.get("genres", []),
             rating=item.get("rating"),
             votes=item.get("votes") or 0,
-            description=item.get("description", ""),
+            description=plot_description(item.get("description", ""), item.get("title", "")),
             moods=moods,
             poster_url=item.get("posterUrl"),
             match_score=display_score,
@@ -828,6 +828,121 @@ def human_join(values: list[str]) -> str:
     if len(cleaned) == 2:
         return f"{cleaned[0]} and {cleaned[1]}"
     return f"{', '.join(cleaned[:-1])}, and {cleaned[-1]}"
+
+
+def plot_description(description: str, title: str = "") -> str:
+    text = re.sub(r"\s+", " ", str(description or "")).strip()
+    if not text:
+        return ""
+
+    sentences = split_sentences(text)
+    kept: list[str] = []
+    fallback: list[str] = []
+
+    for sentence in sentences:
+        cleaned = clean_plot_sentence(sentence, title)
+        if not cleaned:
+            continue
+        if is_plot_sentence(cleaned):
+            kept.append(cleaned)
+        elif not is_metadata_sentence(cleaned):
+            fallback.append(cleaned)
+
+    chosen = kept or fallback
+    if not chosen:
+        return truncate_description(text)
+    return truncate_description(" ".join(chosen[:3]))
+
+
+def split_sentences(text: str) -> list[str]:
+    parts = re.split(r"(?<=[.!?])\s+", text)
+    return [part.strip() for part in parts if part.strip()]
+
+
+def clean_plot_sentence(sentence: str, title: str = "") -> str:
+    sentence = sentence.strip()
+    if not sentence or sentence.endswith("..."):
+        return ""
+    lowered = sentence.lower()
+    title_lower = str(title or "").lower()
+
+    if "classified within" in lowered or "verified genre profile" in lowered:
+        return ""
+    if title_lower and lowered.startswith(title_lower) and re.search(r"\bis a \d{4}\b|\bis an? \d{4}\b", lowered):
+        if not re.search(r"\bfollows\b|\bcenters on\b|\brevolves around\b|\btells\b|\babout\b", lowered):
+            return ""
+
+    starring_match = re.search(r"\bstars? .+? as ([^.]+)", sentence, flags=re.IGNORECASE)
+    if starring_match and re.search(r"\bwho\b|\bwhose\b|\bmust\b|\btries\b|\bdiscovers\b|\bfinds\b", starring_match.group(1), flags=re.IGNORECASE):
+        sentence = starring_match.group(1).strip()
+
+    sentence = re.sub(r",\s+who\s+", " ", sentence, flags=re.IGNORECASE)
+    sentence = re.sub(r",\s+whose\s+", " whose ", sentence, flags=re.IGNORECASE)
+    sentence = re.sub(r"^the storyline follows\b", "The story follows", sentence, flags=re.IGNORECASE)
+    sentence = re.sub(r"^it follows\b", "The story follows", sentence, flags=re.IGNORECASE)
+    sentence = re.sub(r"^follows\b", "The story follows", sentence, flags=re.IGNORECASE)
+    return sentence[:1].upper() + sentence[1:] if sentence else ""
+
+
+def is_metadata_sentence(sentence: str) -> bool:
+    lowered = sentence.lower()
+    metadata_patterns = [
+        r"\bdirected by\b",
+        r"\bwritten by\b",
+        r"\bproduced by\b",
+        r"\bstarring\b",
+        r"\bstars\b",
+        r"\breleased\b",
+        r"\bpremiered\b",
+        r"\baired\b",
+        r"\bavailable for streaming\b",
+        r"\bbox office\b",
+        r"\bfilm festival\b",
+        r"\bdvd\b",
+        r"\bblu-ray\b",
+        r"\bclassified within\b",
+        r"\bverified genre profile\b",
+    ]
+    return any(re.search(pattern, lowered) for pattern in metadata_patterns)
+
+
+def is_plot_sentence(sentence: str) -> bool:
+    lowered = sentence.lower()
+    plot_patterns = [
+        r"\bfollows\b",
+        r"\bstory follows\b",
+        r"\bcenters on\b",
+        r"\bcentres on\b",
+        r"\brevolves around\b",
+        r"\btells the story\b",
+        r"\babout\b",
+        r"\bwhen\b",
+        r"\bafter\b",
+        r"\bwhile\b",
+        r"\bmust\b",
+        r"\btries to\b",
+        r"\bdiscovers\b",
+        r"\bfinds\b",
+        r"\bsets out\b",
+        r"\btravels\b",
+        r"\bbecomes\b",
+        r"\bstruggles\b",
+        r"\bfaces\b",
+        r"\buncovers\b",
+    ]
+    return any(re.search(pattern, lowered) for pattern in plot_patterns)
+
+
+def truncate_description(text: str, limit: int = 560) -> str:
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) <= limit:
+        return ensure_sentence_end(text)
+    truncated = text[:limit].rsplit(" ", 1)[0].rstrip(" ,;:")
+    return f"{truncated}..."
+
+
+def ensure_sentence_end(text: str) -> str:
+    return text if not text or text[-1] in ".!?" else f"{text}."
 
 
 def facet_labels(item: CatalogItem, category: str) -> set[str]:
