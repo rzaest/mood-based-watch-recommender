@@ -63,8 +63,8 @@ That catalog is built from the final NLP feature table created in the notebooks.
 - `assets/data/catalog.json` - deployable recommendation catalog
 - `render.yaml` - Render backend deployment blueprint
 - `netlify.toml` - Netlify frontend hosting config
-- `requirements-backend.txt` - lightweight backend deployment dependencies
-- `requirements.txt` - full notebook/modeling environment for reproducibility
+- `requirements.txt` - lightweight backend deployment dependencies
+- `requirements-notebooks.txt` - full notebook/modeling environment for reproducibility
 
 ## Notebooks Included
 
@@ -131,13 +131,19 @@ Create and activate a virtual environment:
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements-backend.txt
+pip install -r requirements.txt
 ```
 
 Start the backend and frontend together:
 
 ```bash
 uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+For notebook reproduction or catalog rebuilding, install the larger modeling environment instead:
+
+```bash
+pip install -r requirements-notebooks.txt
 ```
 
 Open:
@@ -199,7 +205,7 @@ Publish directory: .
 Render settings:
 
 ```text
-Build command: pip install -r requirements-backend.txt
+Build command: pip install -r requirements.txt
 Start command: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
 Health check path: /health
 ```
