@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from starlette.responses import Response
 
 from .data_loader import CatalogLoadError, PROJECT_ROOT, load_catalog
 from .recommender import MoodRecommender
@@ -78,6 +79,11 @@ def recommend(request: RecommendRequest) -> RecommendResponse:
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(FRONTEND_ROOT / "index.html")
+
+
+@app.head("/")
+def index_head() -> Response:
+    return Response(status_code=200)
 
 
 @app.get("/app.js")

@@ -376,7 +376,7 @@ The final order is not based on only one thing. Story meaning is the most import
 <div class="seed-card simple-seed">
 <div class="eyebrow">USER PROMPT</div>
 <h2 class="prompt-title">“I want something exciting, futuristic, and intense”</h2>
-<p>Horror · Thriller · Survival</p>
+<p>Sci-fi · Thriller · High intensity</p>
 <p class="seed-explain">The system reads the request and ranks the best matches.</p>
 </div>
 :::
