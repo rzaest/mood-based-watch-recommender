@@ -1,6 +1,6 @@
 # Mood-Based Watch Recommender
 
-Live frontend: https://mood-based-watch-recommender.netlify.app
+Live app: https://mood-based-watch-recommender.onrender.com
 Backend API: https://mood-based-watch-recommender.onrender.com
 
 Mood-Based Watch Recommender is a movie and TV recommendation product that lets users describe what they want to watch in natural language. Instead of only choosing a genre, the user can write prompts such as:
@@ -30,12 +30,12 @@ If a prompt asks specifically for a movie, the backend returns movies. If it ask
 
 ## How The System Works
 
-The final app is backend-connected. Netlify hosts the frontend, and Render hosts the FastAPI backend.
+The final app is backend-connected and deployed as one Render web service. Render serves both the frontend page and the FastAPI backend from the same domain.
 
 Runtime flow:
 
 1. `index.html`, `styles.css`, `config.js`, and `app.js` load in the browser.
-2. `config.js` points the deployed Netlify frontend to the Render backend.
+2. `config.js` keeps API calls on the same Render origin.
 3. The frontend sends prompt/filter JSON to `POST /recommend`.
 4. `backend/main.py` receives the request.
 5. `backend/recommender.py` parses intent, detects format, applies exclusions, scores titles, calibrates match percentages, and returns recommendations.
@@ -54,15 +54,14 @@ That catalog is built from the final NLP feature table created in the notebooks.
 - `index.html` - frontend layout
 - `styles.css` - frontend styling
 - `app.js` - frontend behavior and API calls
-- `config.js` - deployed frontend API URL configuration
+- `config.js` - same-origin frontend API configuration
 - `backend/main.py` - FastAPI app, API routes, and static frontend serving
 - `backend/recommender.py` - prompt parsing, title matching, filtering, scoring, exclusions, and explanations
 - `backend/data_loader.py` - production catalog validation/loading
 - `backend/build_catalog.py` - converts the final NLP feature table into `assets/data/catalog.json`
 - `backend/schemas.py` - request/response models
 - `assets/data/catalog.json` - deployable recommendation catalog
-- `render.yaml` - Render backend deployment blueprint
-- `netlify.toml` - Netlify frontend hosting config
+- `render.yaml` - Render deployment blueprint
 - `requirements.txt` - lightweight backend deployment dependencies
 - `requirements-notebooks.txt` - full notebook/modeling environment for reproducibility
 
@@ -190,17 +189,13 @@ Example request:
 
 ## Deployment
 
-The project is configured for:
-
-- Netlify frontend: `https://mood-based-watch-recommender.netlify.app`
-- Render backend: `https://mood-based-watch-recommender.onrender.com`
-
-Netlify settings:
+The project is configured for a single Render deployment:
 
 ```text
-Build command: leave empty
-Publish directory: .
+https://mood-based-watch-recommender.onrender.com
 ```
+
+Render serves both the user-facing website and the backend API, so no separate static-host deployment is required.
 
 Render settings:
 
@@ -213,7 +208,7 @@ Health check path: /health
 Render environment variable:
 
 ```text
-ALLOWED_ORIGINS=https://mood-based-watch-recommender.netlify.app,https://mood-based-watch-recommender.onrender.com,http://localhost:8000,http://localhost:8765,http://127.0.0.1:8765
+ALLOWED_ORIGINS=https://mood-based-watch-recommender.onrender.com,http://localhost:8000,http://localhost:8765,http://127.0.0.1:8765
 ```
 
-`config.js` is already set so the Netlify frontend calls the Render backend. Local development and Render same-origin serving still use the same host automatically.
+`config.js` is intentionally same-origin. When the app runs on Render, frontend requests go to the same Render domain. Local development works the same way at `http://127.0.0.1:8000`.

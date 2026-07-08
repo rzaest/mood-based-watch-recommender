@@ -7,4 +7,4 @@ services:
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: ALLOWED_ORIGINS
-        value: https://mood-based-watch-recommender.netlify.app,https://mood-based-watch-recommender.onrender.com,http://localhost:8000,http://localhost:8765,http://127.0.0.1:8765
+        value: https://mood-based-watch-recommender.onrender.com,http://localhost:8000,http://localhost:8765,http://127.0.0.1:8765
