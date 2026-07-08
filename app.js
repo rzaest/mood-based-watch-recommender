@@ -125,7 +125,10 @@ function renderResults(results, message) {
     node.querySelector(".match-badge").textContent = `${Math.round((item.match_score || 0) * 100)}% match`;
     node.querySelector("h3").textContent = item.title;
     node.querySelector(".meta").textContent = `${(item.genres || []).join(", ")} • ${formatRating(item.rating)} rating • ${formatVotes(item.votes || 0)} votes`;
-    node.querySelector(".description").textContent = item.description || "";
+    const description = node.querySelector(".description");
+    const descriptionToggle = node.querySelector(".description-toggle");
+    description.textContent = item.description || "";
+    setupDescriptionToggle(description, descriptionToggle);
 
     const tags = node.querySelector(".tags");
     [...(item.genres || []).slice(0, 3), ...(item.moods || []).slice(0, 2)].filter(Boolean).forEach((tag) => {
@@ -135,6 +138,27 @@ function renderResults(results, message) {
     });
     node.querySelector(".why").textContent = item.why || "";
     root.appendChild(node);
+  });
+}
+
+function setupDescriptionToggle(description, button) {
+  if (!description.textContent.trim()) {
+    description.remove();
+    button.remove();
+    return;
+  }
+
+  requestAnimationFrame(() => {
+    const canExpand = description.scrollHeight > description.clientHeight + 4;
+    if (!canExpand) return;
+    button.hidden = false;
+    button.setAttribute("aria-expanded", "false");
+  });
+
+  button.addEventListener("click", () => {
+    const expanded = description.classList.toggle("expanded");
+    button.textContent = expanded ? "Show less" : "Read more";
+    button.setAttribute("aria-expanded", String(expanded));
   });
 }
 

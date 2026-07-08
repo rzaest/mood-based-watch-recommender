@@ -767,21 +767,37 @@ class MoodRecommender:
         )
 
     def _build_why(self, item: CatalogItem, intent: Intent, score: float, seed: SeedMatch | None = None) -> str:
-        top_mood = ", ".join(facet.get("label", "") for facet in item.get("facets", {}).get("mood", [])[:2] if facet.get("label"))
-        top_arc = ", ".join(facet.get("label", "") for facet in item.get("facets", {}).get("arc", [])[:2] if facet.get("label"))
+        top_moods = [clean_label(facet.get("label", "")) for facet in item.get("facets", {}).get("mood", [])[:2] if facet.get("label")]
+        avoid_dark_or_sad = bool({"dark", "sad", "scary"} & set(intent.avoid_signals))
+        top_arcs = [
+            clean_label(facet.get("label", ""))
+            for facet in item.get("facets", {}).get("arc", [])
+            if facet.get("label") and (not avoid_dark_or_sad or facet.get("label") not in {"tragic", "bittersweet", "bleak"})
+        ][:2]
         genre_match = [genre for genre in intent.inferred_genres if genre in item.get("genres", [])]
-        pieces = [f"Match score: {round(score * 100)}%."]
+        title = item.get("title", "This title")
+
         if seed:
-            pieces.append(f"Seed title: {seed.title} ({seed.source}).")
-        if seed and not genre_match:
-            pieces.append("Matched through similar titles, story details, and tone.")
+            intro = f"{title} is recommended because it shares story style, genre, and tone with {seed.title}."
+        elif genre_match:
+            intro = f"{title} fits because it lines up with your request for {human_join(genre_match)}."
         else:
-            pieces.append(f"Genre matched: {', '.join(genre_match)}." if genre_match else "Matched through your prompt, story details, and tone.")
-        if top_mood:
-            pieces.append(f"Mood: {top_mood}.")
-        if top_arc:
-            pieces.append(f"Story feel: {top_arc}.")
-        return " ".join(pieces)
+            intro = f"{title} fits the feeling of your prompt through its story, tone, and overall mood."
+
+        details = []
+        if top_moods:
+            details.append(f"It leans {human_join(top_moods)}")
+        if top_arcs:
+            details.append(f"with an overall {human_join(top_arcs)} story feel")
+
+        if details:
+            explanation = intro + " " + ", ".join(details) + "."
+        else:
+            explanation = intro
+
+        if intent.avoid_signals or intent.excluded_genres:
+            explanation += " It also stays away from the main things you said you did not want."
+        return explanation
 
 
 def label_content_type(content_type: str) -> str:
@@ -797,6 +813,21 @@ def label_content_type(content_type: str) -> str:
         "video": "Video",
         "videoGame": "Video game",
     }.get(content_type, content_type)
+
+
+def clean_label(value: str) -> str:
+    return value.replace("_", " ").replace("-", " ").strip()
+
+
+def human_join(values: list[str]) -> str:
+    cleaned = [value for value in values if value]
+    if not cleaned:
+        return ""
+    if len(cleaned) == 1:
+        return cleaned[0]
+    if len(cleaned) == 2:
+        return f"{cleaned[0]} and {cleaned[1]}"
+    return f"{', '.join(cleaned[:-1])}, and {cleaned[-1]}"
 
 
 def facet_labels(item: CatalogItem, category: str) -> set[str]:

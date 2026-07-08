@@ -353,6 +353,28 @@ h3 {
   -webkit-box-orient: vertical;
 }
 
+.description.expanded {
+  display: block;
+  min-height: 0;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+}
+
+.description-toggle {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 900;
+  padding: 6px 0 0;
+}
+
+.description-toggle:hover {
+  color: var(--accent-strong);
+}
+
 .tags {
   display: flex;
   flex-wrap: wrap;
