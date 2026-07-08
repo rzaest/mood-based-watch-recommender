@@ -1,5 +1,8 @@
 import math
 import re
+import json
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass
 from typing import Any
 
@@ -80,6 +83,16 @@ class Intent:
     inferred_moods: dict[str, float]
     avoid_signals: dict[str, float]
     type_from_prompt: str | None
+    seed_query: str | None = None
+    wants_similarity: bool = False
+
+
+@dataclass
+class SeedMatch:
+    title: str
+    source: str
+    item: CatalogItem | None = None
+    metadata: dict[str, Any] | None = None
 
 
 def normalize(text: str | None) -> str:
@@ -115,6 +128,30 @@ def detect_type_from_prompt(prompt: str) -> str | None:
     return None
 
 
+def normalize_title(text: str | None) -> str:
+    value = normalize(text)
+    value = re.sub(r"\b(the|a|an)\b", " ", value)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def extract_seed_query(text: str) -> tuple[str | None, bool]:
+    patterns = [
+        (r"\b(?:something|films?|movies?|shows?|series)?\s*(?:like|similar to|close to)\s+(.+)$", True),
+        (r"\b(?:based on|in the style of)\s+(.+)$", True),
+        (r"\b(?:watch|see|find|recommend|show me)\s+(.+)$", False),
+    ]
+    cleanup = r"\b(?:but|and|with|without|that is|that are|please|tonight|right now)\b"
+    for pattern, wants_similarity in patterns:
+        match = re.search(pattern, text)
+        if not match:
+            continue
+        candidate = re.split(cleanup, match.group(1))[0].strip(" '\"")
+        candidate = re.sub(r"\b(movie|film|show|series|tv)\b", " ", candidate).strip()
+        if candidate and len(candidate.split()) <= 8:
+            return candidate, wants_similarity
+    return None, False
+
+
 def infer_weighted_signals(text: str, lexicon: dict[str, list[str]]) -> dict[str, float]:
     result: dict[str, float] = {}
     for label, phrases in lexicon.items():
@@ -145,6 +182,7 @@ def parse_intent(prompt: str) -> Intent:
     inferred_genres = infer_weighted_signals(text, GENRE_LEXICON)
     inferred_moods = infer_weighted_signals(desired_text, MOOD_LEXICON)
     avoid_signals = infer_avoid_signals(text)
+    seed_query, wants_similarity = extract_seed_query(text)
 
     positive_desire = any(mood in inferred_moods for mood in ["comforting", "joyful", "funny", "hopeful"]) or "Comedy" in inferred_genres
     if negative_state and positive_desire:
@@ -159,13 +197,14 @@ def parse_intent(prompt: str) -> Intent:
         avoid_signals["sad"] = 1
         avoid_signals["dark"] = 1
 
-    return Intent(text, desired_text, inferred_genres, inferred_moods, avoid_signals, detect_type_from_prompt(text))
+    return Intent(text, desired_text, inferred_genres, inferred_moods, avoid_signals, detect_type_from_prompt(text), seed_query, wants_similarity)
 
 
 class MoodRecommender:
     def __init__(self, catalog: dict[str, Any]):
         self.meta = catalog["meta"]
         self.items: list[CatalogItem] = catalog["items"]
+        self.title_index = [(normalize_title(item.get("title")), item) for item in self.items]
 
     def summary(self) -> CatalogSummary:
         return CatalogSummary(
@@ -189,14 +228,36 @@ class MoodRecommender:
 
         intent = parse_intent(request.prompt)
         effective_type = intent.type_from_prompt or request.type
+        seed = self._resolve_seed(intent.seed_query) if intent.seed_query else None
+        if seed and seed.item and not intent.type_from_prompt:
+            if seed.item.get("type") == "movie":
+                effective_type = "movie"
+            elif seed.item.get("type") in TYPE_GROUPS["tv"]:
+                effective_type = "tv"
+        elif seed and seed.metadata and not intent.type_from_prompt:
+            if seed.metadata.get("kind") == "movie":
+                effective_type = "movie"
+            elif seed.metadata.get("kind") == "tv":
+                effective_type = "tv"
         merged_moods = dict(intent.inferred_moods)
         if request.mood != "all":
             merged_moods[request.mood] = 1
-        intent = Intent(intent.text, intent.desired_text, intent.inferred_genres, merged_moods, intent.avoid_signals, intent.type_from_prompt)
+        intent = Intent(
+            intent.text,
+            intent.desired_text,
+            intent.inferred_genres,
+            merged_moods,
+            intent.avoid_signals,
+            intent.type_from_prompt,
+            intent.seed_query,
+            intent.wants_similarity,
+        )
 
         scored: list[tuple[CatalogItem, float]] = []
         for item in self.items:
             if not self._type_matches(item, effective_type):
+                continue
+            if seed and intent.wants_similarity and seed.item and item.get("id") == seed.item.get("id"):
                 continue
             if (item.get("rating") or 0) < request.min_rating:
                 continue
@@ -205,12 +266,17 @@ class MoodRecommender:
             year = item.get("year") or 0
             if year < request.year_from or year > request.year_to:
                 continue
-            score = self._score_item(item, intent, request)
+            score = self._score_item(item, intent, request, seed)
             if score > 0.05:
                 scored.append((item, score))
 
         scored.sort(key=lambda row: self._sort_key(row[0], row[1], request.sort), reverse=True)
-        results = [self._format_result(item, score, intent, request) for item, score in scored[: request.limit]]
+        raw_results = scored[: request.limit]
+        display_scores = self._calibrate_scores([score for _, score in raw_results])
+        results = [
+            self._format_result(item, raw_score, display_score, intent, request, seed)
+            for (item, raw_score), display_score in zip(raw_results, display_scores, strict=False)
+        ]
         avoids = sorted(set(([request.avoid] if request.avoid != "none" else []) + list(intent.avoid_signals)))
 
         return RecommendResponse(
@@ -219,10 +285,73 @@ class MoodRecommender:
             inferred_genres=list(intent.inferred_genres),
             inferred_moods=list(intent.inferred_moods),
             avoided_signals=avoids,
+            seed_title=seed.title if seed else None,
+            seed_source=seed.source if seed else None,
             count=len(results),
             message=None if results else "No matches passed the filters. Try lowering the vote/rating threshold or widening the format selector.",
             results=results,
         )
+
+    def _resolve_seed(self, seed_query: str | None) -> SeedMatch | None:
+        if not seed_query:
+            return None
+        local = self._find_catalog_seed(seed_query)
+        if local:
+            return SeedMatch(title=local.get("title", seed_query), source="catalog", item=local)
+        external = self._lookup_external_seed(seed_query)
+        if external:
+            return SeedMatch(title=external["title"], source="imdb_suggestion", metadata=external)
+        return None
+
+    def _find_catalog_seed(self, seed_query: str) -> CatalogItem | None:
+        query = normalize_title(seed_query)
+        if not query:
+            return None
+        query_tokens = set(query.split())
+        best_item = None
+        best_score = 0.0
+        for title, item in self.title_index:
+            title_tokens = set(title.split())
+            if not title_tokens:
+                continue
+            overlap = len(query_tokens & title_tokens) / max(len(query_tokens), 1)
+            contains = 0.35 if query in title or title in query else 0
+            starts = 0.15 if title.startswith(query) else 0
+            popularity = min(1, math.log10((item.get("votes") or 0) + 1) / 6.5) * 0.1
+            quality = min(1, (item.get("weightedRating") or item.get("rating") or 0) / 9.2) * 0.05
+            score = overlap + contains + starts + popularity + quality
+            if score > best_score:
+                best_score = score
+                best_item = item
+        return best_item if best_score >= 0.48 else None
+
+    def _lookup_external_seed(self, seed_query: str) -> dict[str, Any] | None:
+        slug = re.sub(r"[^a-z0-9]+", "_", normalize(seed_query)).strip("_")
+        if not slug:
+            return None
+        url = f"https://v2.sg.media-imdb.com/suggestion/{slug[0]}/{urllib.parse.quote(slug)}.json"
+        try:
+            with urllib.request.urlopen(url, timeout=3) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except (OSError, TimeoutError, json.JSONDecodeError):
+            return None
+        for candidate in payload.get("d", []):
+            title = candidate.get("l")
+            if not title:
+                continue
+            qid = candidate.get("qid") or candidate.get("q")
+            kind = "movie" if qid in {"movie", "feature"} else "tv" if qid in {"tvSeries", "tvMiniSeries", "tvMovie"} else None
+            image = candidate.get("i") or {}
+            return {
+                "title": title,
+                "year": candidate.get("y"),
+                "kind": kind,
+                "id": candidate.get("id"),
+                "poster_url": image.get("imageUrl"),
+                "credits": candidate.get("s"),
+                "query": seed_query,
+            }
+        return None
 
     def _type_matches(self, item: CatalogItem, type_filter: str) -> bool:
         if type_filter == "all":
@@ -272,16 +401,51 @@ class MoodRecommender:
                 penalty += 0.18
         return min(0.75, penalty)
 
-    def _score_item(self, item: CatalogItem, intent: Intent, request: RecommendRequest) -> float:
+    def _seed_similarity(self, item: CatalogItem, seed: SeedMatch | None) -> float:
+        if not seed:
+            return 0
+        if seed.item:
+            genre_overlap = jaccard(set(item.get("genres", [])), set(seed.item.get("genres", [])))
+            topic_match = 1 if item.get("topic") and item.get("topic") == seed.item.get("topic") else 0
+            mood_overlap = jaccard(facet_labels(item, "mood"), facet_labels(seed.item, "mood"))
+            arc_overlap = jaccard(facet_labels(item, "arc"), facet_labels(seed.item, "arc"))
+            setting_overlap = jaccard(facet_labels(item, "setting"), facet_labels(seed.item, "setting"))
+            text_overlap = token_overlap(item.get("searchText", ""), seed.item.get("searchText", ""))
+            return min(1, genre_overlap * 0.35 + topic_match * 0.22 + mood_overlap * 0.14 + arc_overlap * 0.1 + setting_overlap * 0.08 + text_overlap * 0.11)
+        if seed.metadata:
+            seed_text = normalize(" ".join(str(seed.metadata.get(key) or "") for key in ["title", "credits", "query"]))
+            return min(1, token_overlap(item.get("searchText", ""), seed_text) * 0.75 + self._text_score(item, Intent(seed_text, seed_text, {}, {}, {}, None)) * 0.25)
+        return 0
+
+    def _score_item(self, item: CatalogItem, intent: Intent, request: RecommendRequest, seed: SeedMatch | None = None) -> float:
         genre = self._genre_score(item, intent.inferred_genres, request.genre)
         mood = self._facet_score(item, "mood", intent.inferred_moods) + self._facet_score(item, "arc", intent.inferred_moods)
         text = self._text_score(item, intent)
+        seed_similarity = self._seed_similarity(item, seed)
         quality = min(1, (item.get("weightedRating") or item.get("rating") or 0) / 9.2)
         popularity = min(1, math.log10((item.get("votes") or 0) + 1) / 6.5)
         topic = 0.82 if item.get("lowConfidence") else 1
         penalty = self._avoid_penalty(item, intent.avoid_signals, request.avoid)
-        score = ((text * 0.34) + (genre * 0.28) + (mood * 0.22) + (quality * 0.11) + (popularity * 0.05) - penalty) * topic
+        if seed:
+            score = ((seed_similarity * 0.52) + (genre * 0.16) + (text * 0.11) + (mood * 0.08) + (quality * 0.08) + (popularity * 0.05) - penalty) * topic
+        else:
+            score = ((text * 0.34) + (genre * 0.28) + (mood * 0.22) + (quality * 0.11) + (popularity * 0.05) - penalty) * topic
         return max(0, min(1, score))
+
+    def _calibrate_scores(self, raw_scores: list[float]) -> list[float]:
+        if not raw_scores:
+            return []
+        best = max(raw_scores)
+        if best <= 0:
+            return raw_scores
+        calibrated = []
+        for score in raw_scores:
+            relative = score / best
+            display = 0.62 + relative * 0.35
+            if score < 0.18:
+                display = min(display, 0.72)
+            calibrated.append(round(max(0, min(0.98, display)), 4))
+        return calibrated
 
     def _sort_key(self, item: CatalogItem, score: float, sort: str) -> float:
         if sort == "rating":
@@ -292,7 +456,7 @@ class MoodRecommender:
             return item.get("year") or 0
         return score
 
-    def _format_result(self, item: CatalogItem, score: float, intent: Intent, request: RecommendRequest) -> RecommendationResult:
+    def _format_result(self, item: CatalogItem, raw_score: float, display_score: float, intent: Intent, request: RecommendRequest, seed: SeedMatch | None = None) -> RecommendationResult:
         moods = [facet.get("label") for facet in item.get("facets", {}).get("mood", [])[:3] if facet.get("label")]
         return RecommendationResult(
             id=item.get("id", ""),
@@ -306,16 +470,21 @@ class MoodRecommender:
             description=item.get("description", ""),
             moods=moods,
             poster_url=item.get("posterUrl"),
-            match_score=round(score, 4),
-            why=self._build_why(item, intent, score),
+            match_score=display_score,
+            why=self._build_why(item, intent, display_score, seed),
         )
 
-    def _build_why(self, item: CatalogItem, intent: Intent, score: float) -> str:
+    def _build_why(self, item: CatalogItem, intent: Intent, score: float, seed: SeedMatch | None = None) -> str:
         top_mood = ", ".join(facet.get("label", "") for facet in item.get("facets", {}).get("mood", [])[:2] if facet.get("label"))
         top_arc = ", ".join(facet.get("label", "") for facet in item.get("facets", {}).get("arc", [])[:2] if facet.get("label"))
         genre_match = [genre for genre in intent.inferred_genres if genre in item.get("genres", [])]
         pieces = [f"Match score: {round(score * 100)}%."]
-        pieces.append(f"Genre intent matched: {', '.join(genre_match)}." if genre_match else "Matched through prompt language, NLP topic, and facets.")
+        if seed:
+            pieces.append(f"Seed title: {seed.title} ({seed.source}).")
+        if seed and not genre_match:
+            pieces.append("Matched through seed-title genres, topic, facets, and story text.")
+        else:
+            pieces.append(f"Genre intent matched: {', '.join(genre_match)}." if genre_match else "Matched through prompt language, NLP topic, and facets.")
         if top_mood:
             pieces.append(f"Mood signals: {top_mood}.")
         if top_arc:
@@ -338,3 +507,19 @@ def label_content_type(content_type: str) -> str:
         "video": "Video",
         "videoGame": "Video game",
     }.get(content_type, content_type)
+
+
+def facet_labels(item: CatalogItem, category: str) -> set[str]:
+    return {facet.get("label", "") for facet in item.get("facets", {}).get(category, []) if facet.get("label")}
+
+
+def jaccard(left: set[str], right: set[str]) -> float:
+    if not left or not right:
+        return 0
+    return len(left & right) / len(left | right)
+
+
+def token_overlap(left: str, right: str) -> float:
+    left_tokens = {token for token in normalize(left).split() if len(token) > 3}
+    right_tokens = {token for token in normalize(right).split() if len(token) > 3}
+    return jaccard(left_tokens, right_tokens)

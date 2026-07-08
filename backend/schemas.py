@@ -44,6 +44,8 @@ class RecommendResponse(BaseModel):
     inferred_genres: list[str]
     inferred_moods: list[str]
     avoided_signals: list[str]
+    seed_title: str | None = None
+    seed_source: str | None = None
     count: int
     message: str | None = None
     results: list[RecommendationResult]

@@ -81,9 +81,10 @@ function renderStatus(data, controls) {
   const genres = data.inferred_genres || [];
   const avoids = data.avoided_signals || [];
   $("#intentSummary").textContent = [
+    data.seed_title ? `Using seed title: ${data.seed_title}.` : null,
     genres.length ? `Inferred ${genres.join(", ")}.` : "No specific genre forced.",
     avoids.length ? `Avoiding ${avoids.join(", ")}.` : "No extra avoid rule.",
-  ].join(" ");
+  ].filter(Boolean).join(" ");
 }
 
 function labelType(type) {
