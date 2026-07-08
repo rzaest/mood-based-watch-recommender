@@ -3,6 +3,18 @@
 __pycache__/
 .ipynb_checkpoints/
 
+# Secrets and local deployment state
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p8
+*.p12
+*.crt
+.netlify/
+.render/
+
 # Local/generated model artifacts not needed by the Netlify app
 models/
 data/*.npy
